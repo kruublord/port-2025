@@ -63,7 +63,7 @@ let introTutorial = null;
  */
 
 function loadScene() {
-  appState.gltfLoader.load("/models/room-port-v1.glb", (glb) => {
+  appState.gltfLoader.load("/models/RoomV2-Export-v1.glb", (glb) => {
     processScene(glb.scene);
     appState.scene.add(glb.scene);
 

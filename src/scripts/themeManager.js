@@ -83,67 +83,63 @@ class ThemeManager {
     return tex;
   }
 
+  // Assumes files live under: public/textures/webp-compresed/{day,night}/...
+  // e.g. /textures/webp-compresed/day/Day-Texture1.webp
+
   loadAllTextures(textureLoader) {
+    const BASE = "/textures/webp-compresed";
+
+    // Keep your existing keys ("one"..."ten") so getTextureKeyFromName() still works.
     const textureMap = {
       one: {
-        day: "/textures/day/Day-Texture1.webp",
-        night: "/textures/night/Night-Texture1.webp",
+        day: `${BASE}/day/Day-Texture1.webp`,
+        night: `${BASE}/night/Night-Texture1.webp`,
       },
       two: {
-        day: "/textures/day/Day-Texture2.webp",
-        night: "/textures/night/Night-Texture2.webp",
+        day: `${BASE}/day/Day-Texture2.webp`,
+        night: `${BASE}/night/Night-Texture2.webp`,
       },
       three: {
-        day: "/textures/day/Day-Texture3.webp",
-        night: "/textures/night/Night-Texture3.webp",
+        day: `${BASE}/day/Day-Texture3.webp`,
+        night: `${BASE}/night/Night-Texture3.webp`,
       },
       four: {
-        day: "/textures/day/Day-Texture4.webp",
-        night: "/textures/night/Night-Texture4.webp",
+        day: `${BASE}/day/Day-Texture4.webp`,
+        night: `${BASE}/night/Night-Texture4.webp`,
       },
       five: {
-        day: "/textures/day/Day-Texture5.webp",
-        night: "/textures/night/Night-Texture5.webp",
+        day: `${BASE}/day/Day-Texture5.webp`,
+        night: `${BASE}/night/Night-Texture5.webp`,
       },
       six: {
-        day: "/textures/day/Day-Texture6.webp",
-        night: "/textures/night/Night-Texture6.webp",
+        day: `${BASE}/day/Day-Texture6.webp`,
+        night: `${BASE}/night/Night-Texture6.webp`,
       },
       seven: {
-        day: "/textures/day/Day-Texture7.webp",
-        night: "/textures/night/Night-Texture7.webp",
+        day: `${BASE}/day/Day-Texture7.webp`,
+        night: `${BASE}/night/Night-Texture7.webp`,
       },
       eight: {
-        day: "/textures/day/Day-Texture8.webp",
-        night: "/textures/night/Night-Texture8.webp",
+        day: `${BASE}/day/Day-Texture8.webp`,
+        night: `${BASE}/night/Night-Texture8.webp`,
       },
       nine: {
-        day: "/textures/day/Day-Texture9.webp",
-        night: "/textures/night/Night-Texture9.webp",
+        day: `${BASE}/day/Day-Texture9.webp`,
+        night: `${BASE}/night/Night-Texture9.webp`,
       },
       ten: {
-        day: "/textures/day/Day-Texture10.webp",
-        night: "/textures/night/Night-Texture10.webp",
-      },
-      eleven: {
-        day: "/textures/day/Day-Texture11.webp",
-        night: "/textures/night/Night-Texture11.webp",
-      },
-      twelve: {
-        day: "/textures/day/Day-Texture12.webp",
-        night: "/textures/night/Night-Texture12.webp",
+        day: `${BASE}/day/Day-Texture10.webp`,
+        night: `${BASE}/night/Night-Texture10.webp`,
       },
 
+      // New emissive names
       emissive: {
-        day: "/textures/day/Day-Emissive.webp",
-        night: "/textures/night/NightEmissive.webp",
+        day: `${BASE}/day/Day-Texture-Emissive.webp`,
+        night: `${BASE}/night/Night-Texture-Emissive.webp`,
       },
     };
 
-    const loadedTextures = {
-      day: {},
-      night: {},
-    };
+    const loadedTextures = { day: {}, night: {} };
 
     Object.entries(textureMap).forEach(([key, paths]) => {
       loadedTextures.day[key] = this.loadTexture(textureLoader, paths.day);
@@ -152,6 +148,8 @@ class ThemeManager {
 
     return { textureMap, loadedTextures };
   }
+
+  // Your processThemedMesh stays the same.
 
   processThemedMesh(child, loadedTextures) {
     const textureKey = this.getTextureKeyFromName(child.name);
