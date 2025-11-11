@@ -16,6 +16,11 @@ export function processScene(sceneRoot) {
       processRotatingObject(child);
       appState.mailbox.processMailboxObject(child);
       if (child.name.includes("raycast")) appState.addRaycasterObject(child);
+      if (child.name.includes("hat"))
+        console.log("Found hat mesh:", child.position);
+    }
+    if (child.name.includes("mug")) {
+      console.log("Found mug mesh:", child.position);
     }
     if (child.name.includes("duck")) {
       console.log("Found duck mesh:", child.position);
@@ -50,8 +55,4 @@ function categorizeAnimated(mesh) {
 function processSpecial(mesh) {
   const { name } = mesh;
   if (name.includes("pig-head")) appState.setPigObject(mesh);
-  if (name.includes("perry-hat")) {
-    appState.setPerryHatObject(mesh);
-    appState.setPerryCupControls(setupPerryCupAnimation(mesh));
-  }
 }

@@ -33,9 +33,7 @@ class AppState {
      * Scene object handles (filled after GLTF load / setup)
      * Keep them nullable to gate logic.
      * ─────────────────────────────────── */
-    this.perryHatObject = null;
     this.pigObject = null;
-    this.perryCupControls = null;
     this.steamMesh = null;
     this.whiteboard = null;
     this.particleTrail = null; // <-- ADD THIS LINE
@@ -147,15 +145,10 @@ class AppState {
 
   /* ===== Scene-object setters ====================================== */
 
-  setPerryHatObject(obj) {
-    this.perryHatObject = obj;
-  }
   setPigObject(obj) {
     this.pigObject = obj;
   }
-  setPerryCupControls(c) {
-    this.perryCupControls = c;
-  }
+
   setSteamMesh(mesh) {
     this.steamMesh = mesh;
   }

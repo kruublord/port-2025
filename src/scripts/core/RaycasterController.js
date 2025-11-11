@@ -182,9 +182,8 @@ export default class RaycasterController {
       return;
     }
 
-    if (object.name.includes("perry-hat") && appState.perryCupControls) {
+    if (object.name.includes("perry-hat")) {
       audioManager.playClick();
-      appState.perryCupControls.toggleLid();
       return; // steam toggle handled elsewhere
     }
 

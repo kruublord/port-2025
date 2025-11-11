@@ -93,43 +93,43 @@ class ThemeManager {
     const textureMap = {
       one: {
         day: `${BASE}/day/Day-Texture1.webp`,
-        night: `${BASE}/night/Night-Texture1.webp`,
+        night: `${BASE}/night/Night-Texture-1.webp`,
       },
       two: {
         day: `${BASE}/day/Day-Texture2.webp`,
-        night: `${BASE}/night/Night-Texture2.webp`,
+        night: `${BASE}/night/Night-Texture-2.webp`,
       },
       three: {
         day: `${BASE}/day/Day-Texture3.webp`,
-        night: `${BASE}/night/Night-Texture3.webp`,
+        night: `${BASE}/night/Night-Texture-3.webp`,
       },
       four: {
         day: `${BASE}/day/Day-Texture4.webp`,
-        night: `${BASE}/night/Night-Texture4.webp`,
+        night: `${BASE}/night/Night-Texture-4.webp`,
       },
       five: {
         day: `${BASE}/day/Day-Texture5.webp`,
-        night: `${BASE}/night/Night-Texture5.webp`,
+        night: `${BASE}/night/Night-Texture-5.webp`,
       },
       six: {
         day: `${BASE}/day/Day-Texture6.webp`,
-        night: `${BASE}/night/Night-Texture6.webp`,
+        night: `${BASE}/night/Night-Texture-6.webp`,
       },
       seven: {
         day: `${BASE}/day/Day-Texture7.webp`,
-        night: `${BASE}/night/Night-Texture7.webp`,
+        night: `${BASE}/night/Night-Texture-7.webp`,
       },
       eight: {
         day: `${BASE}/day/Day-Texture8.webp`,
-        night: `${BASE}/night/Night-Texture8.webp`,
+        night: `${BASE}/night/Night-Texture-8.webp`,
       },
       nine: {
         day: `${BASE}/day/Day-Texture9.webp`,
-        night: `${BASE}/night/Night-Texture9.webp`,
+        night: `${BASE}/night/Night-Texture-9.webp`,
       },
       ten: {
         day: `${BASE}/day/Day-Texture10.webp`,
-        night: `${BASE}/night/Night-Texture10.webp`,
+        night: `${BASE}/night/Night-Texture-10.webp`,
       },
 
       // New emissive names
