@@ -103,7 +103,7 @@ export default function createRenderLoop() {
     if (appState.introTutorial?.isActive) {
       appState.introTutorial.update();
     }
-    if (appState.tvEyes) appState.tvEyes.update();
+    //   if (appState.tvEyes) appState.tvEyes.update();
 
     // inside your render loop tick:
 

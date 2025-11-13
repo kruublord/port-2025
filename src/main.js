@@ -25,6 +25,7 @@ import audioManager from "./scripts/audio.js";
 
 import { initImageOverlay } from "./scripts/fadeOverlayImage.js";
 import { createSteamEffect } from "./scripts/shaders/steamEffect.js";
+import CursorOverlay from "./scripts/effects/CursorOverlay.js";
 
 // Configuration
 import {
@@ -46,7 +47,6 @@ import {
 
 import { IntroTutorial } from "./scripts/ui/IntroTutorial.js";
 import ParticleTrail from "./scripts/effects/ParticleTrail.js"; // <-- Import the new class
-import TVEyesChannel from "./scripts/utils/TVEyesChannel.js"; // from the snippet I gave
 
 // Add to your main initialization (around line where you setup other components)
 let introTutorial = null;
@@ -66,6 +66,25 @@ function loadScene() {
   appState.gltfLoader.load("/models/RoomV2-Export-v1.glb", (glb) => {
     processScene(glb.scene);
     appState.scene.add(glb.scene);
+
+    // after scene + glb added
+    // Try to find likely floor meshes to limit raycasts:
+    const floorCandidates = [];
+    glb.scene.traverse((o) => {
+      if (o.isMesh) {
+        const name = (o.name || "").toLowerCase();
+        const matName = (o.material?.name || "").toLowerCase();
+        if (
+          name.includes("floor") ||
+          name.includes("tile") ||
+          matName.includes("floor") ||
+          matName.includes("tile") ||
+          name.includes("rug")
+        ) {
+          floorCandidates.push(o);
+        }
+      }
+    });
 
     initializeTutorial();
 
@@ -315,33 +334,33 @@ function setupEventListeners() {
  * MAIN INITIALIZATION
  * ===================================================================
  */
-function createTVEyesPlane() {
-  const eyes = new TVEyesChannel({ width: 960, height: 540 });
-  appState.tvEyes = eyes;
+// function createTVEyesPlane() {
+//   const eyes = new TVEyesChannel({ width: 960, height: 540 });
+//   appState.tvEyes = eyes;
 
-  const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, 1),
-    new THREE.MeshBasicMaterial({
-      map: eyes.texture,
-      depthTest: false, // sit “on top” of stuff
-      toneMapped: false, // CanvasTexture already in sRGB
-    })
-  );
-  plane.name = "TV_EYES_PLANE";
-  plane.material.map.flipY = false;
-  plane.material.map.colorSpace = THREE.SRGBColorSpace;
+//   const plane = new THREE.Mesh(
+//     new THREE.PlaneGeometry(1, 1),
+//     new THREE.MeshBasicMaterial({
+//       map: eyes.texture,
+//       depthTest: false, // sit “on top” of stuff
+//       toneMapped: false, // CanvasTexture already in sRGB
+//     })
+//   );
+//   plane.name = "TV_EYES_PLANE";
+//   plane.material.map.flipY = false;
+//   plane.material.map.colorSpace = THREE.SRGBColorSpace;
 
-  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(
-    appState.camera.quaternion
-  );
-  plane.position.set(2.7754769325256348, 3.801779270172119, -5.308991432189941);
+//   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+//     appState.camera.quaternion
+//   );
+//   plane.position.set(2.7754769325256348, 3.801779270172119, -5.308991432189941);
 
-  plane.scale.set(4.8, 2.65, 1);
+//   plane.scale.set(4.8, 2.65, 1);
 
-  plane.renderOrder = 1;
-  appState.scene.add(plane);
-  appState.tvEyesPlane = plane;
-}
+//   plane.renderOrder = 1;
+//   appState.scene.add(plane);
+//   appState.tvEyesPlane = plane;
+// }
 
 document.addEventListener("DOMContentLoaded", () => {
   // Initialize core components using the new Initializer
@@ -349,8 +368,57 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize UI and other components
   initializeUI();
-  createTVEyesPlane();
+  // createTVEyesPlane();
+  //appState.tvEyes.setPupilSize(0.4);
+  const cursorFX = new CursorOverlay({
+    mode: "ribbon",
+    zIndex: 50,
+    domElement: appState.renderer.domElement,
 
+    // Return true => suppress (hide) the orbit/pan HUD for this press.
+    shouldSuppress: (e) => {
+      // 1) If clicking standard HTML controls
+      const ui = e.target.closest?.(
+        "button, a, [role='button'], input, select, textarea"
+      );
+      if (ui) return true;
+
+      // 2) If your 3D raycaster says this is an interactive hit
+      // (adapt to your API; using a hypothetical pick(x,y) here)
+      const hit = appState.raycasterController?.pick?.(e.clientX, e.clientY);
+      if (
+        hit &&
+        (hit.object?.userData?.interactive || hit.object?.userData?.ui)
+      ) {
+        return true;
+      }
+
+      // 3) If you’re holding a modifier that means “not orbiting”
+      if (e.shiftKey || e.altKey || e.metaKey) return true;
+
+      // otherwise, allow the HUD
+      return false;
+    },
+  });
+
+  if (appState.renderer?.domElement?.style) {
+    appState.renderer.domElement.style.touchAction = "none";
+    // block native drag & text selection on the WebGL canvas
+    appState.renderer.domElement.style.userSelect = "none";
+    appState.renderer.domElement.setAttribute("draggable", "false");
+    appState.renderer.domElement.addEventListener("dragstart", (e) => {
+      e.preventDefault();
+    });
+  }
+  cursorFX.start();
+
+  // toggle with a key (SHIFT + C)
+  window.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "c" && e.shiftKey) {
+      cursorFX.nextMode();
+      console.log("Cursor FX mode:", cursorFX.mode);
+    }
+  });
   /* ──────────────────────────────────────────────
    Image overlay → toggle the ray-caster
    ────────────────────────────────────────────── */
@@ -374,7 +442,6 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 
   appState.setRaycasterController(rayCtrl);
-  appState.tvEyes.setPupilSize(0.4);
 
   setupLoadingScreen();
   setupEventListeners();
@@ -382,84 +449,71 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===================================================================
   // CSS RIPPLE EFFECT
   // ===================================================================
-  document.body.addEventListener("click", (event) => {
-    // Check if the click happened directly on the Three.js canvas.
-    // This prevents ripples when clicking on modals, buttons, or other UI.
-    if (event.target === appState.renderer.domElement) {
-      const ripple = document.createElement("div");
-      ripple.className = "ripple";
-      document.body.appendChild(ripple);
+  // document.body.addEventListener("click", (event) => {
+  //   // Check if the click happened directly on the Three.js canvas.
+  //   // This prevents ripples when clicking on modals, buttons, or other UI.
+  //   if (event.target === appState.renderer.domElement) {
+  //     const ripple = document.createElement("div");
+  //     ripple.className = "ripple";
+  //     document.body.appendChild(ripple);
 
-      // Position the ripple at the exact click coordinates
-      ripple.style.left = `${event.clientX}px`;
-      ripple.style.top = `${event.clientY}px`;
+  //     // Position the ripple at the exact click coordinates
+  //     ripple.style.left = `${event.clientX}px`;
+  //     ripple.style.top = `${event.clientY}px`;
 
-      // Remove the ripple element after the animation is done (600ms)
-      setTimeout(() => {
-        ripple.remove();
-      }, 600);
-
-      // const sparkle = document.createElement("div");
-      // sparkle.className = "sparkle"; // Use the new class name
-
-      // // The rest of the JS logic remains the same
-      // document.body.appendChild(sparkle);
-
-      // sparkle.style.left = `${event.clientX}px`;
-      // sparkle.style.top = `${event.clientY}px`;
-
-      // setTimeout(() => {
-      //   sparkle.remove();
-      // }, 500); // Match the animation duration (500ms)
-    }
-  });
+  //     // Remove the ripple element after the animation is done (600ms)
+  //     setTimeout(() => {
+  //       ripple.remove();
+  //     }, 600);
+  //   }
+  // });
 
   // ===================================================================
   // 3D PARTICLE TRAIL EFFECT
   // ===================================================================
   // 1. Instantiate the particle system and store it in the app state
-  const particleTrail = new ParticleTrail(appState.scene);
-  appState.particleTrail = particleTrail;
+  // const particleTrail = new ParticleTrail(appState.scene);
+  // appState.particleTrail = particleTrail;
 
-  // 2. A throttle function to limit how often the mousemove event fires
-  function throttle(func, limit) {
-    let inThrottle;
-    return function () {
-      const args = arguments;
-      const context = this;
-      if (!inThrottle) {
-        func.apply(context, args);
-        inThrottle = true;
-        setTimeout(() => (inThrottle = false), limit);
-      }
-    };
-  }
+  // // 2. A throttle function to limit how often the mousemove event fires
+  // function throttle(func, limit) {
+  //   let inThrottle;
+  //   return function () {
+  //     const args = arguments;
+  //     const context = this;
+  //     if (!inThrottle) {
+  //       func.apply(context, args);
+  //       inThrottle = true;
+  //       setTimeout(() => (inThrottle = false), limit);
+  //     }
+  //   };
+  // }
 
-  // 3. The function that handles spawning particles on mouse move
-  const mouseMoveHandler = (event) => {
-    // Convert 2D mouse position to a 3D point in front of the camera
-    const vec = new THREE.Vector3(
-      (event.clientX / window.innerWidth) * 2 - 1,
-      -(event.clientY / window.innerHeight) * 2 + 1,
-      0.5
-    );
-    vec.unproject(appState.camera);
-    vec.sub(appState.camera.position).normalize();
-    const distance = 5; // How far from the camera the trail appears
-    const spawnPos = appState.camera.position
-      .clone()
-      .add(vec.multiplyScalar(distance));
+  // // 3. The function that handles spawning particles on mouse move
+  // const mouseMoveHandler = (event) => {
+  //   // Convert 2D mouse position to a 3D point in front of the camera
+  //   const vec = new THREE.Vector3(
+  //     (event.clientX / window.innerWidth) * 2 - 1,
+  //     -(event.clientY / window.innerHeight) * 2 + 1,
+  //     0.5
+  //   );
+  //   vec.unproject(appState.camera);
+  //   vec.sub(appState.camera.position).normalize();
+  //   const distance = 5; // How far from the camera the trail appears
+  //   const spawnPos = appState.camera.position
+  //     .clone()
+  //     .add(vec.multiplyScalar(distance));
 
-    // Tell our particle system to spawn a particle at this new 3D position
-    particleTrail.spawnParticle(spawnPos);
-  };
+  //   // Tell our particle system to spawn a particle at this new 3D position
+  //   particleTrail.spawnParticle(spawnPos);
+  // };
 
-  // 4. Attach the throttled function to the mousemove event
-  document.body.addEventListener("mousemove", throttle(mouseMoveHandler, 20));
+  // // 4. Attach the throttled function to the mousemove event
+  // document.body.addEventListener("mousemove", throttle(mouseMoveHandler, 20));
 
   // Load scene and start render loop
   loadScene();
-  loadPeashooter(); // <— add this line
+  loadPeashooter();
 
   setupSteamEffect();
   // right after setupSteamEffect() or wherever you want the loop to begin

@@ -28,12 +28,10 @@ export function initThreeJS(canvas, sizes) {
   );
 
   // 4) Renderer
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-  });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(sizes.width, sizes.height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
