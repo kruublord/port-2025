@@ -62,21 +62,19 @@ let introTutorial = null;
  * SCENE LOADING
  * ===================================================================
  */
-
 function loadScene() {
   appState.gltfLoader.load("/models/RoomV2-Export-v2.glb", (glb) => {
     const clips = glb.animations || [];
 
     // ─────────────────────────────────────────
-    //  MUG ANIMATION: mixer + action + toggle
+    //  MUG + IDLE ANIMATIONS
     // ─────────────────────────────────────────
     const mixer = new THREE.AnimationMixer(glb.scene);
 
-    // hook mixer into your existing RenderLoop (it already loops appState.mixers)
     if (!appState.mixers) appState.mixers = [];
     appState.mixers.push(mixer);
-    const idleClip = THREE.AnimationClip.findByName(clips, "Idle");
 
+    const idleClip = THREE.AnimationClip.findByName(clips, "Idle");
     const mugOpenClip = THREE.AnimationClip.findByName(clips, "mugOpen");
     let mugOpenAction = null;
     let idleAction = null;
@@ -84,18 +82,9 @@ function loadScene() {
     if (mugOpenClip) {
       mugOpenAction = mixer.clipAction(mugOpenClip);
       mugOpenAction.setLoop(THREE.LoopOnce);
-      mugOpenAction.clampWhenFinished = true; // stay at last frame
+      mugOpenAction.clampWhenFinished = true;
     }
-    if (idleClip) {
-      idleAction = mixer.clipAction(idleClip);
-      idleAction.setLoop(THREE.LoopRepeat);
-      idleAction.clampWhenFinished = false;
-      idleAction.timeScale = 1;
-      idleAction.play(); // 🔴 this actually starts the idle
-    }
-    console.log("Idle clip:", idleClip);
-    console.log("Idle action:", idleAction);
-    appState.peashooterIdleAction = idleAction;
+
     if (idleClip) {
       idleAction = mixer.clipAction(idleClip);
       idleAction.setLoop(THREE.LoopRepeat);
@@ -111,7 +100,8 @@ function loadScene() {
       );
     }
 
-    // store state + helper on appState so other systems can trigger it
+    appState.peashooterIdleAction = idleAction;
+
     appState.mugAnimation = {
       action: mugOpenAction,
       duration: mugOpenClip ? mugOpenClip.duration : 0,
@@ -123,17 +113,13 @@ function loadScene() {
       if (!data || !data.action) return;
 
       const { action, duration } = data;
-
-      // Always reset before playing
       action.reset();
 
       if (data.isOpen) {
-        // 🔁 CLOSE: play backwards from the end
         action.time = duration;
         action.timeScale = -1;
         data.isOpen = false;
       } else {
-        // ▶ OPEN: play forwards from the start
         action.time = 0;
         action.timeScale = 1;
         data.isOpen = true;
@@ -141,17 +127,68 @@ function loadScene() {
 
       action.play();
     };
-    processScene(glb.scene);
+
+    // ─────────────────────────────────────────
+    //  PROCESS SCENE + ADD
+    // ─────────────────────────────────────────
+    processScene(glb.scene); // applies theme materials (including peashooter)
     appState.scene.add(glb.scene);
 
-    // ─────────────────────────────────────────────
-    // Mailbox setup – now that GLB meshes exist
-    // ─────────────────────────────────────────────
+    // ─────────────────────────────────────────
+    //  EMBEDDED PEASHOOTER SETUP (NO EXTERNAL GLB)
+    // ─────────────────────────────────────────
+    const embeddedPea =
+      glb.scene.getObjectByName("peashooter-nine") ||
+      glb.scene.getObjectByName("peashooter") ||
+      glb.scene.getObjectByName("Peashooter");
+
+    if (embeddedPea) {
+      console.log("[Pea] Embedded peashooter found:", embeddedPea);
+
+      embeddedPea.traverse((o) => {
+        if (!o.isMesh && !o.isSkinnedMesh) return;
+
+        const name = o.name || "(no-name)";
+        const matType = o.material ? o.material.type : "none";
+
+        // make sure themed ShaderMaterial still supports skinning
+        if (o.isSkinnedMesh && o.material && "skinning" in o.material) {
+          o.material.skinning = true;
+        }
+
+        o.frustumCulled = false;
+        o.visible = true;
+
+        console.log("[Pea] submesh:", {
+          name,
+          isSkinned: !!o.isSkinnedMesh,
+          matType,
+          skinning: o.material && o.material.skinning,
+        });
+      });
+
+      // Store for later use
+      appState.peashooter = embeddedPea;
+
+      // Optional debug box to check position
+      const peaBox = new THREE.Box3().setFromObject(embeddedPea);
+      const peaCenter = peaBox.getCenter(new THREE.Vector3());
+      console.log("[Pea] embedded peashooter center:", peaCenter);
+      // const peaHelper = new THREE.Box3Helper(peaBox);
+      // appState.scene.add(peaHelper);
+    } else {
+      console.warn(
+        "[Pea] No embedded peashooter found – check object name in Blender."
+      );
+    }
+
+    // ─────────────────────────────────────────
+    //  MAILBOX SETUP
+    // ─────────────────────────────────────────
     const mailbox = setupMailbox(glb.scene, {
       showModal: appState.showModal,
     });
 
-    // attach mailbox to existing raycaster controller
     if (appState.raycasterController) {
       appState.raycasterController.mailbox = mailbox;
     }
@@ -288,87 +325,65 @@ function playIntroAnimation() {
 // ─────────────────────────────────────────────────────────────
 // Load Peashooter model – centered & placed in the room
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Load Peashooter model and snap it to the pot anchor
+// (keeps the original transforms inside the GLB)
+// ─────────────────────────────────────────────────────────────
 function loadPeashooter() {
-  // If the GLB is in /public/models/peashooter.glb
-  let url = "/models/peashooter.glb";
-  // If it's in src instead, use this form:
-  // let url = new URL("./models/peashooter.glb", import.meta.url).href;
+  const url = "/models/peashooter.glb";
 
   appState.gltfLoader.load(
     url,
     (gltf) => {
       const model = gltf.scene;
 
-      // Wrap in a container so we can move/scale without fighting internal offsets
       const root = new THREE.Group();
-      root.name = "Peashooter";
+      root.name = "PeashooterRoot";
       root.add(model);
 
-      // Ensure visible & not culled
-      root.visible = true;
+      // Make sure meshes render correctly + apply theme
       root.traverse((o) => {
-        if (o.isSkinnedMesh || o.isMesh) {
-          const oldMap = o.material?.map || null;
-          o.material = new THREE.MeshBasicMaterial({
-            color: 0x00ff00, // bright green for now
-            map: oldMap,
-            skinning: !!o.isSkinnedMesh,
-          });
-          o.frustumCulled = false;
+        if (!o.isMesh && !o.isSkinnedMesh) return;
+
+        const name = o.name || "(no-name)";
+
+        // Apply themed material if textures are loaded and name matches
+        if (window.loadedTextures) {
+          const themed = themeManager.processThemedMesh(
+            o,
+            window.loadedTextures
+          );
+          console.log("[Pea] themed?", { name, themed, mat: o.material?.type });
         }
+
+        // Safety: ensure skinned meshes keep skinning on the shader
+        if (o.isSkinnedMesh && o.material && "skinning" in o.material) {
+          o.material.skinning = true;
+        }
+
+        o.frustumCulled = false;
+        o.visible = true;
       });
 
-      // 1) Compute bounding box of the whole container
-      const box = new THREE.Box3().setFromObject(root);
-      const size = new THREE.Vector3();
-      const center = new THREE.Vector3();
-      box.getSize(size);
-      box.getCenter(center);
+      const anchor = appState.peashooterAnchor;
+      if (anchor) {
+        root.position.copy(anchor.position);
+        root.quaternion.copy(anchor.quaternion);
+        root.scale.copy(anchor.scale);
+      } else {
+        console.warn(
+          "[Pea] Peashooter anchor not set – using GLB's own transform."
+        );
+      }
 
-      // 2) Scale so the largest dimension is about 1.5 m
-      const maxDim = Math.max(size.x, size.y, size.z) || 1;
-      const target = 1.5;
-      const scale = target / maxDim;
-      root.scale.setScalar(scale);
-
-      // Recompute box & center after scaling
-      box.setFromObject(root);
-      box.getCenter(center);
-
-      // 3) Decide where you want it in the room
-      //    (right now: x=0, y=1.5, z=0 – tweak these to put it on the floor, table, etc.)
-      const spawnPos = new THREE.Vector3(0, 1.5, 0);
-
-      // Translate the whole container so its bounding-box center is at spawnPos
-      const offset = spawnPos.clone().sub(center);
-      root.position.add(offset);
-
-      // Add to scene and keep a reference
       appState.scene.add(root);
       appState.peashooter = root;
 
-      // Debug helpers
-      const helperBox = new THREE.Box3Helper(
-        new THREE.Box3().setFromObject(root)
-      );
-      appState.scene.add(helperBox);
+      console.log("[Pea] Peashooter animations:", gltf.animations);
 
-      const axes = new THREE.AxesHelper(0.5);
-      axes.position.copy(spawnPos);
-      appState.scene.add(axes);
-
-      console.log(
-        "Peashooter world center:",
-        new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3())
-      );
-      console.log("Peashooter animations:", gltf.animations);
-
-      // 4) Animation – use the inner model as the mixer root so bones animate
       const mixer = new THREE.AnimationMixer(model);
-      let clip = null;
-
       if (gltf.animations && gltf.animations.length > 0) {
-        clip =
+        const clip =
           THREE.AnimationClip.findByName(gltf.animations, "Idle") ||
           gltf.animations[0];
 
@@ -377,6 +392,8 @@ function loadPeashooter() {
         action.clampWhenFinished = false;
         action.enabled = true;
         action.play();
+
+        appState.peashooterIdleAction = action;
       } else {
         console.warn("Peashooter GLB has no animations");
       }
@@ -553,7 +570,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load scene and start render loop
   loadScene();
-  loadPeashooter();
+  // loadPeashooter();
 
   setupSteamEffect();
   // right after setupSteamEffect() or wherever you want the loop to begin

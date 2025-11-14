@@ -153,26 +153,24 @@ class ThemeManager {
 
   processThemedMesh(child, loadedTextures) {
     const textureKey = this.getTextureKeyFromName(child.name);
+    if (!textureKey) return false;
 
-    if (textureKey) {
-      const material = new THREE.ShaderMaterial({
-        uniforms: {
-          uDayTexture: { value: loadedTextures.day[textureKey] },
-          uNightTexture: { value: loadedTextures.night[textureKey] },
-          uMixRatio: this.uMixRatio, // shared reference
-        },
-        vertexShader: themeVertexShader,
-        fragmentShader: themeFragmentShader,
-      });
+    const isSkinned = child.isSkinnedMesh === true;
 
-      // Clone the material so it's independent
-      child.material = material;
-      this.themedMeshes.push(child);
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uDayTexture: { value: loadedTextures.day[textureKey] },
+        uNightTexture: { value: loadedTextures.night[textureKey] },
+        uMixRatio: this.uMixRatio,
+      },
+      vertexShader: themeVertexShader,
+      fragmentShader: themeFragmentShader,
+      skinning: isSkinned, // ← important
+    });
 
-      return true;
-    }
-
-    return false;
+    child.material = material;
+    this.themedMeshes.push(child);
+    return true;
   }
 
   loadGlassEnvironmentMap(
