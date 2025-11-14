@@ -69,11 +69,10 @@ class AppState {
 
     /* ───────────────────────────────────
      * Managers
-     * e.g. for camera transitions, iFrame/monitor, mailbox, etc.
+     * e.g. for camera transitions, iFrame/monitor, , etc.
      * ─────────────────────────────────── */
     this.cameraManager = null;
     this.innerWeb = null;
-    this.mailbox = null;
 
     /* ───────────────────────────────────
      * UI hooks (DOM elements / callbacks)
@@ -183,9 +182,6 @@ class AppState {
   }
   setInnerWeb(iw) {
     this.innerWeb = iw;
-  }
-  setMailbox(box) {
-    this.mailbox = box;
   }
 
   /* ===== UI components ============================================= */

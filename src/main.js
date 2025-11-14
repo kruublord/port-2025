@@ -22,6 +22,7 @@ import themeManager from "./scripts/themeManager.js";
 import audioManager from "./scripts/audio.js";
 
 // Features
+import { setupMailbox } from "./scripts/mailbox.js"; // adjust path if needed
 
 import { initImageOverlay } from "./scripts/fadeOverlayImage.js";
 import { createSteamEffect } from "./scripts/shaders/steamEffect.js";
@@ -63,31 +64,99 @@ let introTutorial = null;
  */
 
 function loadScene() {
-  appState.gltfLoader.load("/models/RoomV2-Export-v1.glb", (glb) => {
+  appState.gltfLoader.load("/models/RoomV2-Export-v2.glb", (glb) => {
+    const clips = glb.animations || [];
+
+    // ─────────────────────────────────────────
+    //  MUG ANIMATION: mixer + action + toggle
+    // ─────────────────────────────────────────
+    const mixer = new THREE.AnimationMixer(glb.scene);
+
+    // hook mixer into your existing RenderLoop (it already loops appState.mixers)
+    if (!appState.mixers) appState.mixers = [];
+    appState.mixers.push(mixer);
+    const idleClip = THREE.AnimationClip.findByName(clips, "Idle");
+
+    const mugOpenClip = THREE.AnimationClip.findByName(clips, "mugOpen");
+    let mugOpenAction = null;
+    let idleAction = null;
+
+    if (mugOpenClip) {
+      mugOpenAction = mixer.clipAction(mugOpenClip);
+      mugOpenAction.setLoop(THREE.LoopOnce);
+      mugOpenAction.clampWhenFinished = true; // stay at last frame
+    }
+    if (idleClip) {
+      idleAction = mixer.clipAction(idleClip);
+      idleAction.setLoop(THREE.LoopRepeat);
+      idleAction.clampWhenFinished = false;
+      idleAction.timeScale = 1;
+      idleAction.play(); // 🔴 this actually starts the idle
+    }
+    console.log("Idle clip:", idleClip);
+    console.log("Idle action:", idleAction);
+    appState.peashooterIdleAction = idleAction;
+    if (idleClip) {
+      idleAction = mixer.clipAction(idleClip);
+      idleAction.setLoop(THREE.LoopRepeat);
+      idleAction.clampWhenFinished = false;
+      idleAction.timeScale = 1;
+      idleAction.play();
+
+      console.log(
+        "Idle action running?",
+        idleAction.isRunning(),
+        "weight:",
+        idleAction.getEffectiveWeight()
+      );
+    }
+
+    // store state + helper on appState so other systems can trigger it
+    appState.mugAnimation = {
+      action: mugOpenAction,
+      duration: mugOpenClip ? mugOpenClip.duration : 0,
+      isOpen: false,
+    };
+
+    appState.toggleMugLid = () => {
+      const data = appState.mugAnimation;
+      if (!data || !data.action) return;
+
+      const { action, duration } = data;
+
+      // Always reset before playing
+      action.reset();
+
+      if (data.isOpen) {
+        // 🔁 CLOSE: play backwards from the end
+        action.time = duration;
+        action.timeScale = -1;
+        data.isOpen = false;
+      } else {
+        // ▶ OPEN: play forwards from the start
+        action.time = 0;
+        action.timeScale = 1;
+        data.isOpen = true;
+      }
+
+      action.play();
+    };
     processScene(glb.scene);
     appState.scene.add(glb.scene);
 
-    // after scene + glb added
-    // Try to find likely floor meshes to limit raycasts:
-    const floorCandidates = [];
-    glb.scene.traverse((o) => {
-      if (o.isMesh) {
-        const name = (o.name || "").toLowerCase();
-        const matName = (o.material?.name || "").toLowerCase();
-        if (
-          name.includes("floor") ||
-          name.includes("tile") ||
-          matName.includes("floor") ||
-          matName.includes("tile") ||
-          name.includes("rug")
-        ) {
-          floorCandidates.push(o);
-        }
-      }
+    // ─────────────────────────────────────────────
+    // Mailbox setup – now that GLB meshes exist
+    // ─────────────────────────────────────────────
+    const mailbox = setupMailbox(glb.scene, {
+      showModal: appState.showModal,
     });
 
-    initializeTutorial();
+    // attach mailbox to existing raycaster controller
+    if (appState.raycasterController) {
+      appState.raycasterController.mailbox = mailbox;
+    }
 
+    initializeTutorial();
     playIntroAnimation();
   });
 }
@@ -248,6 +317,126 @@ function toggleSteam(steamMesh, duration = 0.5) {
     },
   });
 }
+// ─────────────────────────────────────────────────────────────
+// Load Peashooter model (DEBUG: glued to camera, always visible)
+// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Load Peashooter model – DEBUG: force into view + snap camera
+// ─────────────────────────────────────────────────────────────
+function loadPeashooter() {
+  // If the GLB is in /public/models/peashooter.glb
+  let url = "/models/peashooter.glb";
+  // If it's in src instead, use this form:
+  // let url = new URL("./models/peashooter.glb", import.meta.url).href;
+
+  appState.gltfLoader.load(
+    url,
+    (gltf) => {
+      const root = gltf.scene;
+      root.name = "Peashooter";
+
+      // Make sure it's visible
+      root.visible = true;
+
+      // DEBUG MATERIAL: bright, unlit
+      root.traverse((o) => {
+        if (o.isSkinnedMesh || o.isMesh) {
+          const oldMap = o.material?.map || null;
+
+          o.material = new THREE.MeshBasicMaterial({
+            color: 0x00ff00, // bright green
+            map: oldMap,
+          });
+
+          o.material.depthTest = true;
+          o.material.depthWrite = true;
+          o.frustumCulled = false;
+
+          // IMPORTANT: put it on the same layers as the camera
+          o.layers.mask = appState.camera.layers.mask;
+        }
+      });
+
+      // Center + auto-scale to ~1.5 m largest dimension
+      const box = new THREE.Box3().setFromObject(root);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+
+      // Center model at origin first
+      root.position.sub(center);
+
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      const target = 1.5;
+      const scale = target / maxDim;
+      root.scale.multiplyScalar(scale);
+
+      // Place it at a very simple, fixed world position
+      // (0, 1.5, 0) should be above ground level in most setups
+      root.position.set(0, 1.5, 0);
+
+      // Add to the main scene
+      appState.scene.add(root);
+      appState.peashooter = root;
+
+      // Visual helpers
+      const helperBox = new THREE.Box3Helper(
+        new THREE.Box3().setFromObject(root)
+      );
+      helperBox.layers.mask = appState.camera.layers.mask;
+      appState.scene.add(helperBox);
+
+      const axes = new THREE.AxesHelper(1.0);
+      axes.position.copy(root.position);
+      axes.layers.mask = appState.camera.layers.mask;
+      appState.scene.add(axes);
+
+      // SNAP CAMERA TO LOOK AT IT (debug!)
+      const cam = appState.camera;
+      cam.position.set(
+        root.position.x,
+        root.position.y + 1.0,
+        root.position.z + 4.0
+      );
+      cam.lookAt(root.position);
+      cam.updateProjectionMatrix?.();
+
+      console.log(
+        "Peashooter world position:",
+        root.getWorldPosition(new THREE.Vector3())
+      );
+      console.log("Camera world position:", cam.position.clone());
+      console.log("Camera layers mask:", cam.layers.mask.toString(2));
+      console.log("Peashooter animations:", gltf.animations);
+
+      // Play Idle animation if present, otherwise first clip
+      const mixer = new THREE.AnimationMixer(root);
+      let clip = null;
+
+      if (gltf.animations && gltf.animations.length > 0) {
+        clip =
+          THREE.AnimationClip.findByName(gltf.animations, "Idle") ||
+          gltf.animations[0];
+
+        const action = mixer.clipAction(clip);
+        action.setLoop(THREE.LoopRepeat);
+        action.clampWhenFinished = false;
+        action.enabled = true;
+        action.play();
+      } else {
+        console.warn("Peashooter GLB has no animations");
+      }
+
+      // store mixer so your render loop can tick it
+      appState.addMixer(mixer);
+    },
+    undefined,
+    (err) => {
+      console.error("Failed to load peashooter.glb", err);
+    }
+  );
+}
 
 /**
  * ===================================================================
@@ -371,7 +560,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // createTVEyesPlane();
   //appState.tvEyes.setPupilSize(0.4);
   const cursorFX = new CursorOverlay({
-    mode: "ribbon",
+    mode: "paw",
     zIndex: 50,
     domElement: appState.renderer.domElement,
 
@@ -430,6 +619,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Make it available to the rest of the app
   appState.showImageOverlay = showImageOverlay;
   appState.hideImageOverlay = hideImageOverlay;
+
+  // ─────────────────────────────────────────────
+  // Mailbox setup – hook into scene + modal system
+  // ─────────────────────────────────────────────
+
   // create controller (camera & empty list for now)
   const rayCtrl = new RaycasterController(
     appState.camera,
@@ -437,7 +631,7 @@ document.addEventListener("DOMContentLoaded", () => {
     {
       outlinePass: appState.outlinePass,
       scaleTargets: appState.animatedObjects.scale,
-      mailbox: appState.mailbox,
+      // mailbox will be attached later, after GLB is loaded
     }
   );
 
@@ -445,71 +639,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setupLoadingScreen();
   setupEventListeners();
-
-  // ===================================================================
-  // CSS RIPPLE EFFECT
-  // ===================================================================
-  // document.body.addEventListener("click", (event) => {
-  //   // Check if the click happened directly on the Three.js canvas.
-  //   // This prevents ripples when clicking on modals, buttons, or other UI.
-  //   if (event.target === appState.renderer.domElement) {
-  //     const ripple = document.createElement("div");
-  //     ripple.className = "ripple";
-  //     document.body.appendChild(ripple);
-
-  //     // Position the ripple at the exact click coordinates
-  //     ripple.style.left = `${event.clientX}px`;
-  //     ripple.style.top = `${event.clientY}px`;
-
-  //     // Remove the ripple element after the animation is done (600ms)
-  //     setTimeout(() => {
-  //       ripple.remove();
-  //     }, 600);
-  //   }
-  // });
-
-  // ===================================================================
-  // 3D PARTICLE TRAIL EFFECT
-  // ===================================================================
-  // 1. Instantiate the particle system and store it in the app state
-  // const particleTrail = new ParticleTrail(appState.scene);
-  // appState.particleTrail = particleTrail;
-
-  // // 2. A throttle function to limit how often the mousemove event fires
-  // function throttle(func, limit) {
-  //   let inThrottle;
-  //   return function () {
-  //     const args = arguments;
-  //     const context = this;
-  //     if (!inThrottle) {
-  //       func.apply(context, args);
-  //       inThrottle = true;
-  //       setTimeout(() => (inThrottle = false), limit);
-  //     }
-  //   };
-  // }
-
-  // // 3. The function that handles spawning particles on mouse move
-  // const mouseMoveHandler = (event) => {
-  //   // Convert 2D mouse position to a 3D point in front of the camera
-  //   const vec = new THREE.Vector3(
-  //     (event.clientX / window.innerWidth) * 2 - 1,
-  //     -(event.clientY / window.innerHeight) * 2 + 1,
-  //     0.5
-  //   );
-  //   vec.unproject(appState.camera);
-  //   vec.sub(appState.camera.position).normalize();
-  //   const distance = 5; // How far from the camera the trail appears
-  //   const spawnPos = appState.camera.position
-  //     .clone()
-  //     .add(vec.multiplyScalar(distance));
-
-  //   // Tell our particle system to spawn a particle at this new 3D position
-  //   particleTrail.spawnParticle(spawnPos);
-  // };
-
-  // // 4. Attach the throttled function to the mousemove event
-  // document.body.addEventListener("mousemove", throttle(mouseMoveHandler, 20));
 
   // Load scene and start render loop
   loadScene();

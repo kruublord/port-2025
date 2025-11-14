@@ -1,4 +1,3 @@
-// mailbox.js
 import gsap from "gsap";
 
 /**
@@ -8,6 +7,13 @@ export function setupMailbox(scene, modalSystem) {
   let mailboxCover = null;
   let mailboxHovered = false;
   let isMailboxOpen = false;
+
+  // Find the mailbox cover once from the loaded scene (GLB root)
+  scene.traverse((child) => {
+    if (child.isMesh && child.name === "mailbox-cover-four") {
+      mailboxCover = child;
+    }
+  });
 
   // Animate cover open/close
   function toggleMailboxCover(open) {
@@ -20,56 +26,28 @@ export function setupMailbox(scene, modalSystem) {
     });
   }
 
-  // Find & store the cover mesh when scene loads
-  function processMailboxObject(child) {
-    if (child.name.includes("mailboxCover")) {
-      mailboxCover = child;
-      return true;
-    }
-    return false;
-  }
-
-  // Show contact modal when clicking pole
+  // Show contact modal when clicking any mailbox piece
   function handleRaycastIntersection(intersectedObject, contactModal) {
-    if (intersectedObject.name.includes("mailbox-pole")) {
+    const name = intersectedObject.name || "";
+
+    if (name === "mailbox-four-raycast" || name === "mailbox-cover-four") {
       modalSystem.showModal(contactModal);
       return true;
     }
+
     return false;
   }
 
-  /**
-   * Called every frame after updateOutlineHover has run.
-   * @param {Array}  currentIntersects  Array of raycast hits
-   * @param {OutlinePass} outlinePass   Three.js post-processing outline pass
-   */
-  function updateMailboxHover(currentIntersects, outlinePass) {
-    // Check if the mailbox pole is under the pointer
-    const hitPole = currentIntersects.find((hit) =>
-      hit.object.name.includes("mailbox-pole")
-    );
-
-    if (hitPole) {
-      // On first frame of hover, open the cover
-      if (!mailboxHovered) {
-        mailboxHovered = true;
-        toggleMailboxCover(true);
-      }
-      // Every frame the pole is hovered, add the cover to the outline
-      outlinePass.selectedObjects.push(mailboxCover);
-    } else {
-      // On pointer leave, close the cover
-      if (mailboxHovered) {
-        mailboxHovered = false;
-        toggleMailboxCover(false);
-      }
-    }
+  // Called by RaycasterController when the mailbox group is hovered / unhovered
+  function setMailboxHoverState(isHovered) {
+    if (mailboxHovered === isHovered) return;
+    mailboxHovered = isHovered;
+    toggleMailboxCover(isHovered);
   }
 
   return {
-    processMailboxObject,
     handleRaycastIntersection,
-    updateMailboxHover,
     toggleMailboxCover,
+    setMailboxHoverState,
   };
 }

@@ -1,7 +1,7 @@
 // scripts/ui/CursorOverlay.js
 export default class CursorOverlay {
   constructor({
-    mode = "halo",
+    mode = "paw",
     zIndex = 20,
     maxHistory = 120,
     domElement = null,
@@ -18,8 +18,10 @@ export default class CursorOverlay {
     this._down = null; // {x,y,timer,button,type,shown}
 
     /* -------- modes & state -------- */
-    this.MODES = ["ribbon", "ink", "comet", "halo", "clickPing", "confetti"];
-    this.mode = reducedMotion ? "halo" : mode;
+    this.MODES = ["ink", "comet", "clickPing", "confetti", "paw"];
+    this.confettiAlwaysOn = true; // run confetti regardless of this.mode
+
+    this.mode = (reducedMotion ? "paw" : mode) || "paw";
     this.enabled = true;
     this.running = false;
     this.zIndex = zIndex;
@@ -98,11 +100,11 @@ export default class CursorOverlay {
         }, this.showDelayMs),
       };
 
-      // effects (don’t block controls)
+      // EDIT this block inside _onDown:
       if (e.pointerType !== "mouse" || e.button === 0) {
+        if (this.confettiAlwaysOn) this._spawnConfetti(e.clientX, e.clientY);
         if (this.mode === "clickPing")
           this._spawnClickPing(e.clientX, e.clientY);
-        if (this.mode === "confetti") this._spawnConfetti(e.clientX, e.clientY);
       }
     };
 
@@ -156,11 +158,6 @@ export default class CursorOverlay {
 
     /* -------- style knobs -------- */
     this.style = {
-      // ribbon
-      ribbonBaseWidth: 8,
-      ribbonGamma: 1.6,
-      color: "#ffffff",
-
       // ink
       inkAlpha: 0.55,
       inkMinR: 8,
@@ -171,11 +168,7 @@ export default class CursorOverlay {
       cometDotBase: 4,
       cometDotMax: 10,
       cometStreaks: 3,
-
-      // halo
-      haloRadius: 30,
-      haloAlpha: 0.22,
-      haloBoost: 0.28,
+      color: "#ffffff",
 
       // clickPing (slower + a bit bigger)
       pingMax: 46,
@@ -187,6 +180,31 @@ export default class CursorOverlay {
       confettiCount: 10,
       confettiLife: 0.6,
       confettiSpread: 220,
+      // paw
+      // in this.style (replace + add)
+      // darker, crisper “stamp”
+      pawColor: "#3d312b",
+      pawAlpha: 0.75,
+      pawStrokeColor: "#1e1a18",
+      pawStrokeAlpha: 0.45,
+      pawStrokeWidth: 0.8,
+      pawComposite: "multiply", // <- key: sink into floor tones
+      pawToeSquash: 0.78, // < 1.0 squashes toes vertically
+      pawPadSquash: 0.85, // squash main pad a little
+      pawToeTilt: 0.22, // radians, tilt the outer toes slightly
+      // required by the loop:
+      pawSize: 17, // px
+      pawSpacing: 28, // px between stamps
+      pawLife: 0.9, // seconds
+      pawSkew: 0.22, // radians (left/right yaw)
+      pawJitter: 2.5, // px random offset
+      pawScaleSpeedBoost: 0.00035, // size grows slightly with speed
+      pawForwardOffsetRad: Math.PI / 2, // align “up-facing” paw to travel dir
+
+      // sprite (optional; when present, replaces vector drawing)
+      pawSpriteUrl: "/ui-icons/paw.svg", // transparent PNG/SVG of a paw stamp
+      pawSpriteBlend: "multiply", // how it sits on surfaces
+      pawSpritePixels: 40, // sprite base size == your old "size"
 
       // --- GIZMO HUD ---
       gizmoSize: 18,
@@ -205,8 +223,6 @@ export default class CursorOverlay {
       zoomIn: "/ui-icons/zoom.svg",
       zoomOut: "/ui-icons/zoom.svg",
     });
-    /* -------- per-mode state -------- */
-    this._lastInteractiveBoost = 0;
 
     this.ink = {
       pool: [],
@@ -230,6 +246,17 @@ export default class CursorOverlay {
 
     // create DOM anchor for HUD (above canvas)
     this._initGizmoDOM();
+    // sprite
+    this._pawSprite = null;
+    if (this.style.pawSpriteUrl) this._loadPawSprite(this.style.pawSpriteUrl);
+    // --- paw state ---
+    this.paw = {
+      acc: 0, // accumulated travel distance (px)
+      side: 1, // +1 / -1 alternates left/right
+      stamps: [], // [{x,y,ang,side,t,life,scale,alpha}]
+      maxStamps: 160, // cap to avoid unbounded growth
+      lastAng: 0,
+    };
   }
   _loadGizmoIcons(urls) {
     const fixCors = (url) => {
@@ -266,6 +293,17 @@ export default class CursorOverlay {
       this._iconsReady = true; // flag we can check at draw time
     });
   }
+  _loadPawSprite(url) {
+    const isSameOrigin = /^\/[^/]/.test(url);
+    const img = new Image();
+    if (!isSameOrigin) img.crossOrigin = "anonymous";
+    img.decoding = "async";
+    img.loading = "eager";
+    img.onload = () => (this._pawSprite = img);
+    img.onerror = () => console.warn("[CursorOverlay] paw sprite failed:", url);
+    img.src = url;
+  }
+
   _isImgReady(img) {
     return !!(
       img &&
@@ -306,7 +344,7 @@ export default class CursorOverlay {
 
   /* ===== loop ===== */
   _resize() {
-    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const dpr = Math.max(1, Math.min(1.75, window.devicePixelRatio || 1));
     this.dpr = dpr;
     this.canvas.width = Math.floor(innerWidth * dpr);
     this.canvas.height = Math.floor(innerHeight * dpr);
@@ -318,6 +356,7 @@ export default class CursorOverlay {
 
     const dt = Math.max(0.001, (t - this._lastT) / 1000);
     this._lastT = t;
+    this.ctx.clearRect(0, 0, innerWidth, innerHeight);
 
     // velocity
     const rawVx = (this.pos.x - this.lastPos.x) / dt;
@@ -327,27 +366,95 @@ export default class CursorOverlay {
     this.vel.y += (rawVy - this.vel.y) * k;
     this.speed = Math.hypot(this.vel.x, this.vel.y);
 
-    // path
+    // movement this frame
+    const dx = this.pos.x - this.lastPos.x;
+    const dy = this.pos.y - this.lastPos.y;
+    const dFrame = Math.hypot(dx, dy);
+    if (this.mode === "paw") {
+      // accumulate distance and drop stamps at fixed spacing
+      this.paw.acc += dFrame;
+
+      // movement direction (radians)
+      const ang = Math.atan2(dy, dx);
+
+      // speed-influenced size
+      const base = this.style.pawSize;
+      const speedScale =
+        1 + Math.min(1.2, this.speed * this.style.pawScaleSpeedBoost);
+
+      while (this.paw.acc >= this.style.pawSpacing) {
+        this.paw.acc -= this.style.pawSpacing;
+
+        // tiny jitter so it feels organic
+        const jx = (Math.random() - 0.5) * 2 * this.style.pawJitter;
+        const jy = (Math.random() - 0.5) * 2 * this.style.pawJitter;
+
+        // side offset perpendicular to direction
+        const nx = -Math.sin(ang);
+        const ny = Math.cos(ang);
+        const sideOffset = base * 0.35 * this.paw.side;
+
+        const x = this.pos.x + nx * sideOffset + jx;
+        const y = this.pos.y + ny * sideOffset + jy;
+
+        // movement direction (radians)
+        const rawAng = Math.atan2(dy, dx);
+
+        // smooth heading so tiny jitters don't flip the paw
+        const ease = 1 - Math.exp(-dt * 20); // responsiveness
+        this.paw.lastAng += (rawAng - this.paw.lastAng) * ease;
+
+        // final yaw = travel dir + fixed forward offset + left/right skew
+        const yaw =
+          this.paw.lastAng +
+          (this.style.pawForwardOffsetRad ?? Math.PI / 2) +
+          this.paw.side * this.style.pawSkew;
+
+        this.paw.stamps.push({
+          x,
+          y,
+          ang: yaw,
+          side: this.paw.side,
+          t: 0,
+          life: this.style.pawLife,
+          scale: base * speedScale,
+          alpha: this.style.pawAlpha,
+        });
+
+        // manage pool
+        if (this.paw.stamps.length > this.paw.maxStamps)
+          this.paw.stamps.shift();
+
+        // alternate feet
+        this.paw.side *= -1;
+      }
+    }
+
+    // keep the other visual modes fed (unchanged)
     const last = this.samples[this.samples.length - 1];
-    if (!last || Math.hypot(this.pos.x - last.x, this.pos.y - last.y) > 0.8) {
+    if (!last) {
       this.samples.push({ x: this.pos.x, y: this.pos.y, t });
-      if (this.samples.length > this.maxHistory) this.samples.shift();
+    } else {
+      const d = Math.hypot(this.pos.x - last.x, this.pos.y - last.y);
+      if (d > 0.8) {
+        this.samples.push({ x: this.pos.x, y: this.pos.y, t });
+        if (this.samples.length > this.maxHistory) this.samples.shift();
+      } else {
+        last.x = this.pos.x;
+        last.y = this.pos.y;
+        last.t = t;
+      }
     }
 
     // draw current mode
     if (this.enabled) {
+      // after (no ribbon/halo)
       switch (this.mode) {
-        case "ribbon":
-          this._drawRibbon();
-          break;
         case "ink":
           this._drawInk(dt);
           break;
         case "comet":
           this._drawComet();
-          break;
-        case "halo":
-          this._drawHalo(dt);
           break;
         case "clickPing":
           this._drawClickPing(dt);
@@ -355,9 +462,12 @@ export default class CursorOverlay {
         case "confetti":
           this._drawConfetti(dt);
           break;
+        case "paw":
+          this._drawPawTrail(dt);
+          break;
       }
+      if (this.confettiAlwaysOn) this._drawConfetti(dt); // <-- ADD this line
 
-      // draw gizmo HUD last (always-on layer)
       this._drawGizmo(dt);
     }
 
@@ -366,133 +476,9 @@ export default class CursorOverlay {
     requestAnimationFrame(this._loop);
   }
 
-  /* ===== ribbon ===== */
-  _drawRibbon() {
-    const ctx = this.ctx;
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
-    if (this.samples.length < 6) return;
-    const pts = this._resampleCatmullRom(this.samples, 48);
-    if (pts.length < 6) return;
-
-    let arc = 0;
-    for (let i = 1; i < pts.length; i++)
-      arc += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
-    if (arc < 40) return;
-
-    const w0 =
-      this.style.ribbonBaseWidth * (1 + 0.001 * Math.min(this.speed, 1200));
-    const gamma = this.style.ribbonGamma;
-    const strip = [];
-    for (let i = 1; i < pts.length - 1; i++) {
-      const p0 = pts[i - 1],
-        p1 = pts[i],
-        p2 = pts[i + 1];
-      const tx = p2.x - p0.x,
-        ty = p2.y - p0.y;
-      const len = Math.hypot(tx, ty) || 1;
-      const nx = -ty / len,
-        ny = tx / len;
-      const s = i / (pts.length - 1);
-      const width = w0 * Math.pow(1 - s, gamma);
-      const hx = width * 0.5 * nx,
-        hy = width * 0.5 * ny;
-      strip.push({
-        lx: p1.x - hx,
-        ly: p1.y - hy,
-        rx: p1.x + hx,
-        ry: p1.y + hy,
-      });
-    }
-
-    ctx.save();
-    const grad = ctx.createLinearGradient(
-      strip[0].lx,
-      strip[0].ly,
-      strip[strip.length - 1].lx,
-      strip[strip.length - 1].ly
-    );
-    grad.addColorStop(0, this._rgba(this.style.color, 0.9));
-    grad.addColorStop(1, this._rgba(this.style.color, 0.0));
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(strip[0].lx, strip[0].ly);
-    for (let i = 1; i < strip.length; i++) ctx.lineTo(strip[i].lx, strip[i].ly);
-    for (let i = strip.length - 1; i >= 0; i--)
-      ctx.lineTo(strip[i].rx, strip[i].ry);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  _resampleCatmullRom(points, N) {
-    if (points.length < 4) return points.slice();
-    const out = [];
-    const alpha = 0.5;
-    const segs = Math.min(points.length - 3, 6);
-    for (let s = points.length - 1 - segs; s < points.length - 2; s++) {
-      const p0 = points[s - 1] || points[s],
-        p1 = points[s],
-        p2 = points[s + 1],
-        p3 = points[s + 2] || points[s + 1];
-      const t0 = 0,
-        t1 = t0 + Math.pow(this._dist(p0, p1), alpha),
-        t2 = t1 + Math.pow(this._dist(p1, p2), alpha),
-        t3 = t2 + Math.pow(this._dist(p2, p3), alpha);
-      const steps = Math.ceil(N / segs);
-      for (let i = 0; i <= steps; i++) {
-        const t = t1 + (i / steps) * (t2 - t1);
-        const A1 = this._lerpP(
-          p0,
-          p1,
-          (t1 - t) / (t1 - t0),
-          (t - t0) / (t1 - t0)
-        );
-        const A2 = this._lerpP(
-          p1,
-          p2,
-          (t2 - t) / (t2 - t1),
-          (t - t1) / (t2 - t1)
-        );
-        const A3 = this._lerpP(
-          p2,
-          p3,
-          (t3 - t) / (t3 - t2),
-          (t - t2) / (t3 - t2)
-        );
-        const B1 = this._lerpP(
-          A1,
-          A2,
-          (t2 - t) / (t2 - t0),
-          (t - t0) / (t2 - t0)
-        );
-        const B2 = this._lerpP(
-          A2,
-          A3,
-          (t3 - t) / (t3 - t1),
-          (t - t1) / (t3 - t1)
-        );
-        const C = this._lerpP(
-          B1,
-          B2,
-          (t2 - t) / (t2 - t1),
-          (t - t1) / (t2 - t1)
-        );
-        out.push(C);
-      }
-    }
-    return out;
-  }
-  _dist(a, b) {
-    return Math.max(1e-3, Math.hypot(a.x - b.x, a.y - b.y));
-  }
-  _lerpP(a, b, wa, wb) {
-    return { x: a.x * wa + b.x * wb, y: a.y * wa + b.y * wb };
-  }
-
   /* ===== ink ===== */
   _drawInk(dt) {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
     const last = this.samples[this.samples.length - 2];
     if (last) {
       const d = Math.hypot(this.pos.x - last.x, this.pos.y - last.y);
@@ -522,6 +508,7 @@ export default class CursorOverlay {
     }
     ctx.restore();
   }
+
   _spawnInk() {
     if (this.ink.active.length >= this.ink.max) return;
     const p = this.ink.pool.pop() || {};
@@ -564,7 +551,6 @@ export default class CursorOverlay {
   /* ===== comet ===== */
   _drawComet() {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
     const K = this.style.cometStreaks,
       pts = this.samples;
     if (pts.length >= 3) {
@@ -629,58 +615,9 @@ export default class CursorOverlay {
     ctx.fill();
   }
 
-  /* ===== halo ===== */
-  _drawHalo(dt) {
-    const ctx = this.ctx;
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
-
-    const el = document.elementFromPoint(this.pos.x, this.pos.y);
-    const isInteractive = !!(
-      el &&
-      (el.tagName === "BUTTON" ||
-        el.tagName === "A" ||
-        el.onclick ||
-        el.getAttribute("role") === "button")
-    );
-    const targetBoost = isInteractive ? 1 : 0;
-    this._lastInteractiveBoost +=
-      (targetBoost - this._lastInteractiveBoost) * (1 - Math.exp(-dt * 12));
-
-    const r = this.style.haloRadius * (1 - 0.25 * this._lastInteractiveBoost);
-    const baseA =
-      this.style.haloAlpha + this._lastInteractiveBoost * this.style.haloBoost;
-
-    const g = ctx.createRadialGradient(
-      this.pos.x,
-      this.pos.y,
-      0,
-      this.pos.x,
-      this.pos.y,
-      r
-    );
-    g.addColorStop(0, this._rgba("#ffffff", baseA));
-    g.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    if (this._lastInteractiveBoost > 0.01) {
-      ctx.strokeStyle = this._rgba(
-        "#ffffff",
-        0.35 * this._lastInteractiveBoost
-      );
-      ctx.lineWidth = 1.25;
-      ctx.beginPath();
-      ctx.arc(this.pos.x, this.pos.y, r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-  }
-
   /* ===== clickPing ===== */
   _drawClickPing(dt) {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
 
     // faint dot under cursor so you know you're in this mode
     ctx.fillStyle = this._rgba("#ffffff", 0.08);
@@ -713,7 +650,6 @@ export default class CursorOverlay {
   /* ===== confetti ===== */
   _drawConfetti(dt) {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
     for (let i = this._confetti.length - 1; i >= 0; i--) {
       const p = this._confetti[i];
       p.t += dt;
@@ -963,5 +899,101 @@ export default class CursorOverlay {
       g = parseInt(c.slice(2, 4), 16),
       b = parseInt(c.slice(4, 6), 16);
     return `rgba(${r},${g},${b},${a})`;
+  }
+
+  _drawPawTrail(dt) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = this.style.pawComposite || "multiply";
+    // update + draw newest on top
+    for (let i = this.paw.stamps.length - 1; i >= 0; i--) {
+      const s = this.paw.stamps[i];
+      s.t += dt;
+      const k = s.t / s.life; // 0..1
+      if (k >= 1) {
+        this.paw.stamps.splice(i, 1);
+        continue;
+      }
+      // ease out opacity + slight shrink as it fades
+      const fade = Math.max(0, 1 - k);
+      const alpha = s.alpha * fade;
+      const size = s.scale * (0.95 + 0.05 * fade);
+
+      this._drawPawStamp(s.x, s.y, s.ang, size, alpha);
+    }
+    ctx.restore();
+    // subtle head hint (optional): a tiny live pad at the cursor
+    // this._drawPawStamp(this.pos.x, this.pos.y, 0, this.style.pawSize*0.65, 0.18);
+  }
+  _drawPawStamp(x, y, ang, size, alpha) {
+    const s = this.style;
+    const ctx = this.ctx;
+
+    // --- sprite path (preferred) ---
+    if (
+      this._pawSprite &&
+      this._pawSprite.complete &&
+      this._pawSprite.naturalWidth > 0
+    ) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(ang);
+
+      const prevOp = ctx.globalCompositeOperation;
+      ctx.globalCompositeOperation =
+        s.pawSpriteBlend || s.pawComposite || "source-over";
+      ctx.globalAlpha = alpha;
+      ctx.imageSmoothingEnabled = true;
+
+      const w = size * (s.pawSpriteScale || 1); // size is in px already
+      ctx.drawImage(this._pawSprite, -w * 0.5, -w * 0.5, w, w);
+
+      ctx.globalCompositeOperation = prevOp;
+      ctx.restore();
+      return; // done
+    }
+
+    // --- vector fallback ---
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+
+    const fill = this._rgba(s.pawColor || "#3d312b", alpha);
+    const stroke = this._rgba(
+      s.pawStrokeColor || "#2e2e2e",
+      Math.min(1, alpha * (s.pawStrokeAlpha ?? 0.35))
+    );
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = s.pawStrokeWidth ?? 1;
+
+    // normalized design space (40 == design width)
+    const S = size / 40;
+    const oval = (ox, oy, rx, ry, rot = 0) => {
+      ctx.save();
+      ctx.translate(ox * S, oy * S);
+      ctx.rotate(rot);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx * S, ry * S, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    // main pad (slightly squashed peanut + base)
+    const ps = s.pawPadSquash ?? 0.85;
+    oval(-7, 0, 12, 11 * ps);
+    oval(7, 0, 12, 11 * ps);
+    oval(0, 10, 15, 10 * ps);
+
+    // toes (squashed + subtle tilt)
+    const qs = s.pawToeSquash ?? 0.78;
+    const tilt = s.pawToeTilt ?? 0.22;
+    oval(-16, -14, 6.4, 8.2 * qs, -tilt);
+    oval(-6, -18, 7.0, 9.0 * qs, -tilt * 0.35);
+    oval(6, -18, 7.0, 9.0 * qs, tilt * 0.35);
+    oval(16, -14, 6.4, 8.2 * qs, tilt);
+
+    ctx.restore();
   }
 }

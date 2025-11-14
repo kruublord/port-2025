@@ -42,6 +42,9 @@ export default class RaycasterController {
     this.scaleTargets = scaleTargets;
     this.mailbox = mailbox;
 
+    /** hover-groupId -> THREE.Object3D[] */
+    this.hoverGroups = {};
+
     window.addEventListener("click", () => this._handleClick());
   }
 
@@ -69,12 +72,18 @@ export default class RaycasterController {
   update(mouseX, mouseY) {
     if (!this.enabled) return [];
 
+    // raycast plumbing -------------------------------------------------
     this.pointer.set(mouseX, mouseY);
     this.raycaster.setFromCamera(this.pointer, this.camera);
     this.intersects = this.raycaster.intersectObjects(this.objects, true);
 
+    const primaryHit = this.intersects[0]?.object || null;
+
+    // outlines + hover groups ------------------------------------------
+    let hoverGroup = null;
+
     if (this.outlinePass) {
-      // your normal hover logic
+      // baseline outline behavior (whatever your hoverOutline.js does)
       updateOutlineHover(
         this.raycaster,
         this.pointer,
@@ -83,34 +92,103 @@ export default class RaycasterController {
         this.outlinePass
       );
 
-      // 🔒 keep the tutorial’s selection while frozen
       if (this._outlineFrozen) {
+        // 🔒 keep the tutorial’s selection while frozen
         this.outlinePass.selectedObjects = this._frozenSelection || [];
+      } else {
+        // augment with hover groups (mug, mailbox, etc.)
+        hoverGroup = this._getHoverGroupForObject(primaryHit);
+
+        // if the hit object belongs to a hover group,
+        // force the outline to use the whole group (e.g. mug + lid, mailbox body + cover)
+        if (hoverGroup && hoverGroup.length) {
+          this.outlinePass.selectedObjects = hoverGroup;
+        }
       }
+    } else {
+      // still resolve hoverGroup even if we don't have an outlinePass
+      hoverGroup = this._getHoverGroupForObject(primaryHit);
     }
 
+    // mailbox cover open/close driven by hoverGroup --------------------
+    if (this.mailbox?.setMailboxHoverState) {
+      const isMailboxHovered =
+        !!hoverGroup &&
+        hoverGroup.some(
+          (obj) => obj.userData && obj.userData.hoverGroup === "mailboxSet"
+        );
+
+      // this will log "Mailbox hover state:" and then call toggleMailboxCover(...)
+      this.mailbox.setMailboxHoverState(isMailboxHovered);
+    }
+
+    // scale pulse targets ----------------------------------------------
     if (this.scaleTargets?.length) {
       updateHoverScale(this.intersects, this.scaleTargets);
-    }
-    if (this.mailbox?.updateMailboxHover) {
-      this.mailbox.updateMailboxHover(this.intersects, this.outlinePass);
     }
 
     return this.intersects;
   }
 
   /* ---------- tiny convenience helpers ------------- */
+  /**
+   * Given an intersected object, return all objects that belong to the same
+   * hoverGroup (based on userData.hoverGroup). Uses a small cache so we
+   * only scan once per groupId.
+   */
+  _getHoverGroupForObject(object) {
+    if (!object) return null;
+
+    // 1) walk up parents to find a hoverGroup id
+    let current = object;
+    let groupId = null;
+
+    while (current) {
+      if (current.userData && current.userData.hoverGroup) {
+        groupId = current.userData.hoverGroup;
+        break;
+      }
+      current = current.parent;
+    }
+
+    if (!groupId) return null;
+
+    // 2) if we already built this group once, reuse it
+    if (this.hoverGroups[groupId]) {
+      return this.hoverGroups[groupId];
+    }
+
+    // 3) otherwise, scan through raycastable objects to build the group
+    const groupMembers = [];
+    const search = (obj) => {
+      if (!obj) return;
+      if (obj.userData && obj.userData.hoverGroup === groupId) {
+        groupMembers.push(obj);
+      }
+      if (obj.children && obj.children.length) {
+        obj.children.forEach(search);
+      }
+    };
+
+    this.objects.forEach(search);
+
+    this.hoverGroups[groupId] = groupMembers;
+    return groupMembers;
+  }
 
   /** Replace the set of objects the raycaster tests */
   setObjects(objects = []) {
     this.objects = objects;
   }
+
   clearHover() {
     if (this.outlinePass) this.outlinePass.selectedObjects = [];
     if (this.scaleTargets?.length) updateHoverScale([], this.scaleTargets);
-    if (this.mailbox?.updateMailboxHover)
-      this.mailbox.updateMailboxHover([], this.outlinePass);
+    if (this.mailbox?.setMailboxHoverState) {
+      this.mailbox.setMailboxHoverState(false);
+    }
   }
+
   /** Toggle the entire controller on/off */
   setEnabled(flag) {
     this.enabled = !!flag;
@@ -144,12 +222,26 @@ export default class RaycasterController {
     if (!appState.isRaycastEnabled || this.intersects.length === 0) return;
 
     const object = this.intersects[0].object;
+    // 0) mug lid open/close toggle -----------------------------------
+    // Use hoverGroup so either the mug body or hat lid will trigger it
+    const mugHoverGroup = this._getHoverGroupForObject(object);
+    const isMugGroup =
+      mugHoverGroup &&
+      mugHoverGroup.some(
+        (obj) => obj.userData && obj.userData.hoverGroup === "mugSet"
+      );
+
+    if (isMugGroup && typeof appState.toggleMugLid === "function") {
+      audioManager.playClick();
+      appState.toggleMugLid();
+      return;
+    }
 
     // 1) modals --------------------------------------------------------
     if (object.name.includes("about-raycast")) return openModal("about");
     else if (object.name.includes("work-raycast")) return openModal("projects");
-    else if (object.name.includes("erhu-seven")) return openModal("erhu");
-    else if (object.name.includes("TV-seven")) return openModal("projects");
+    else if (object.name.includes("erhu-raycast")) return openModal("erhu");
+    else if (object.name.includes("TV-raycast")) return openModal("projects");
 
     // 2) image overlay -------------------------------------------------
     if (imageData[object.name]) {
@@ -167,7 +259,7 @@ export default class RaycasterController {
     }
 
     // 4) special objects ----------------------------------------------
-    if (object.name.includes("whiteboard-raycast-one")) {
+    if (object.name.includes("whiteboard-raycast")) {
       audioManager.playClick();
       appState.cameraManager.zoomToWhiteboard(appState.whiteboard, 1.5);
       appState.whiteboard.toggleWhiteboardMode(true);
@@ -185,10 +277,6 @@ export default class RaycasterController {
     if (object.name.includes("perry-hat")) {
       audioManager.playClick();
       return; // steam toggle handled elsewhere
-    }
-
-    if (object.name.includes("pig-head")) {
-      return randomOink(appState.pigObject);
     }
 
     // 5) mailbox & spin objects ---------------------------------------

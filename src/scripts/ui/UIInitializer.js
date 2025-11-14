@@ -60,14 +60,10 @@ function initializeUI() {
     showModal: appState.showModal,
     hideModal: appState.hideModal,
   };
-  const mailbox = setupMailbox(appState.scene, modalSystemForMailbox);
-  appState.setMailbox(mailbox);
 }
 
-// Optional, but recommended
 function clearHoverEffects() {
   appState.clearHoverEffects();
-  appState.mailbox.updateMailboxHover([]);
 }
 
 export { initializeUI, handleModalOpen, handleModalClose };

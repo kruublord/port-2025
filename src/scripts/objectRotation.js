@@ -13,7 +13,7 @@ let globeRotationSpeed = 0.005;
  * @param {THREE.Mesh} mesh - The mesh to process
  */
 function processRotatingObject(mesh) {
-  if (mesh.name.includes("globe-eight")) {
+  if (mesh.name.includes("globe-six")) {
     rotatingObjects.globe.push(mesh);
     return;
   }
