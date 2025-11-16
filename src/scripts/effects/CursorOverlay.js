@@ -207,7 +207,10 @@ export default class CursorOverlay {
       pawSpritePixels: 40, // sprite base size == your old "size"
 
       // --- GIZMO HUD ---
+      // --- GIZMO HUD ---
       gizmoSize: 18,
+      gizmoPanScale: 1.15, // pan a bit bigger
+      gizmoZoomScale: 0.85, // zoom a bit smaller
       gizmoStroke: 2,
       gizmoAlpha: 0.9,
       gizmoFadeIn: 14,
@@ -370,7 +373,7 @@ export default class CursorOverlay {
     const dx = this.pos.x - this.lastPos.x;
     const dy = this.pos.y - this.lastPos.y;
     const dFrame = Math.hypot(dx, dy);
-    if (this.mode === "paw") {
+    if (this.mode === "paw" && !this._isGizmoActive()) {
       // accumulate distance and drop stamps at fixed spacing
       this.paw.acc += dFrame;
 
@@ -720,6 +723,14 @@ export default class CursorOverlay {
     `;
     document.body.appendChild(this._gizmoEl);
   }
+  _isGizmoActive() {
+    const g = this._gizmo;
+    return (
+      (g.hold || (g.type === "zoom" && g.timer > 0)) &&
+      g.type !== "none" &&
+      g.alpha > 0.05
+    );
+  }
 
   _drawGizmo(dt) {
     const g = this._gizmo;
@@ -732,8 +743,12 @@ export default class CursorOverlay {
       target > g.alpha
         ? (this.style.gizmoFadeIn ?? 14)
         : (this.style.gizmoFadeOut ?? 8);
+
     g.alpha += (target - g.alpha) * (1 - Math.exp(-dt * λ));
-    if (g.type === "zoom" && g.timer > 0) g.timer = Math.max(0, g.timer - dt);
+
+    if (g.type === "zoom" && g.timer > 0) {
+      g.timer = Math.max(0, g.timer - dt);
+    }
 
     if (g.alpha <= 0.01) {
       if (!g.hold && g.type !== "zoom") g.type = "none";
@@ -744,24 +759,51 @@ export default class CursorOverlay {
     ctx.save();
     ctx.translate(this.pos.x, this.pos.y);
 
-    // contrast shadow
-    const sh = this.style.gizmoShadow ?? 0.18;
+    // contrast shadow (disabled for zoom gizmo)
+    const baseShadow = this.style.gizmoShadow ?? 0.18;
+    const sh = g.type === "zoom" ? 0 : baseShadow;
+
     if (sh > 0) {
       ctx.shadowColor = this._rgba("#000000", sh * g.alpha);
       ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    } else {
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
     }
 
     ctx.globalAlpha = (this.style.gizmoAlpha ?? 0.9) * g.alpha;
 
-    // try images (only if fully loaded)
     const s = this.style.gizmoSize ?? 18;
+    const scaleMap = {
+      orbit: 1,
+      pan: this.style.gizmoPanScale ?? 1,
+      zoom: this.style.gizmoZoomScale ?? 1,
+    };
+    const sEff = s * (scaleMap[g.type] || 1);
+    // draw image icon, preserving aspect ratio
     const drawCentered = (img) => {
       if (!this._isImgReady(img)) return false;
-      // scale nicely regardless of intrinsic size (esp. for SVG)
-      const w = s * 2,
-        h = s * 2;
+
+      const iw = img.naturalWidth || 1;
+      const ih = img.naturalHeight || 1;
+      const aspect = iw / ih;
+
+      const maxSize = sEff * 2;
+      let w, h;
+      if (aspect >= 1) {
+        // wider than tall
+        w = maxSize;
+        h = maxSize / aspect;
+      } else {
+        // taller than wide
+        h = maxSize;
+        w = maxSize * aspect;
+      }
+
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(img, -w / 2, -h / 2, w, h);
       return true;
@@ -781,6 +823,8 @@ export default class CursorOverlay {
             g.wheelDir > 0 ? this._gizmoImg.zoomIn : this._gizmoImg.zoomOut
           );
           break;
+        default:
+          break;
       }
     }
 
@@ -793,13 +837,13 @@ export default class CursorOverlay {
 
       switch (g.type) {
         case "orbit":
-          this._iconOrbit(ctx, s);
+          this._iconOrbit(ctx, sEff);
           break;
         case "pan":
-          this._iconHand(ctx, s);
+          this._iconHand(ctx, sEff);
           break;
         case "zoom":
-          this._iconMagnifier(ctx, s, g.wheelDir);
+          this._iconMagnifier(ctx, sEff, g.wheelDir);
           break;
         default:
           break;

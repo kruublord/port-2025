@@ -1,5 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-<svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M10 17C13.866 17 17 13.866 17 10C17 6.13401 13.866 3 10 3C6.13401 3 3 6.13401 3 10C3 13.866 6.13401 17 10 17Z" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M20.9992 21L14.9492 14.95" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.6 20.96">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #e6ecf4;
+      }
+    </style>
+  </defs>
+  <path class="cls-1" d="M6.28.02c3.79-.28,7.06,2.6,7.28,6.38.16,2.71-.12,5.57,0,8.3-.82,8.37-12.74,8.33-13.5-.04.12-2.73-.16-5.59,0-8.3C.25,3.03,2.95.26,6.28.02ZM6.37,1.52C3.78,1.72,1.71,3.86,1.55,6.45s.13,5.45,0,8.11c.45,6.51,10.09,6.53,10.5,0,.17-2.64-.13-5.46,0-8.11-.21-2.95-2.72-5.16-5.68-4.93Z"/>
+  <path class="cls-1" d="M6.65,4.52c.45-.07.85.21.9.67.11,1-.07,2.2-.01,3.22-.19.84-1.4.78-1.49-.08-.11-.99.08-2.17,0-3.18.04-.3.3-.58.59-.63Z"/>
 </svg>
