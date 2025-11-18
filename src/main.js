@@ -27,6 +27,7 @@ import { setupMailbox } from "./scripts/mailbox.js"; // adjust path if needed
 import { initImageOverlay } from "./scripts/fadeOverlayImage.js";
 import { createSteamEffect } from "./scripts/shaders/steamEffect.js";
 import CursorOverlay from "./scripts/effects/CursorOverlay.js";
+import ErhuInteraction from "./scripts/erhu.js"; // ADD THIS
 
 // Configuration
 import {
@@ -98,6 +99,20 @@ function loadScene() {
         "weight:",
         idleAction.getEffectiveWeight()
       );
+    }
+    const erhuMesh = glb.scene.getObjectByName("erhu-raycast-nine"); // Adjust name if needed
+    if (erhuMesh) {
+      const erhuInteraction = new ErhuInteraction(appState.scene, erhuMesh);
+      appState.erhuInteraction = erhuInteraction;
+
+      // Attach to raycaster controller if it exists
+      if (appState.raycasterController) {
+        appState.raycasterController.erhuInteraction = erhuInteraction;
+      }
+
+      console.log("Erhu interaction setup complete");
+    } else {
+      console.warn("Erhu mesh not found - check object name");
     }
 
     appState.peashooterIdleAction = idleAction;

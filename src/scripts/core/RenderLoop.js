@@ -106,7 +106,10 @@ export default function createRenderLoop() {
     //   if (appState.tvEyes) appState.tvEyes.update();
 
     // inside your render loop tick:
-
+    /* --- 8. Erhu Particles ---------------------------------------- */
+    if (appState.erhuInteraction) {
+      appState.erhuInteraction.update(dt);
+    }
     /* --- 7. render passes ----------------------------------------- */
     appState.innerWeb.render();
     appState.composer.render();

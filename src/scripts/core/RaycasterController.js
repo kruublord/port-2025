@@ -36,11 +36,17 @@ export default class RaycasterController {
     this._frozenSelection = null;
 
     // optional helpers --------------------------------
-    const { outlinePass = null, scaleTargets = [], mailbox = null } = opts;
+    const {
+      outlinePass = null,
+      scaleTargets = [],
+      mailbox = null,
+      erhuInteraction = null, // ADD THIS LINE
+    } = opts;
 
     this.outlinePass = outlinePass;
     this.scaleTargets = scaleTargets;
     this.mailbox = mailbox;
+    this.erhuInteraction = erhuInteraction; // ADD THIS LINE
 
     /** hover-groupId -> THREE.Object3D[] */
     this.hoverGroups = {};
@@ -78,7 +84,15 @@ export default class RaycasterController {
     this.intersects = this.raycaster.intersectObjects(this.objects, true);
 
     const primaryHit = this.intersects[0]?.object || null;
-
+    // === ADD THIS BLOCK ===
+    if (this.erhuInteraction) {
+      const isErhuHovered = this.erhuInteraction.isErhuObject(primaryHit);
+      if (isErhuHovered) {
+        this.erhuInteraction.onHoverStart();
+      } else {
+        this.erhuInteraction.onHoverEnd();
+      }
+    }
     // outlines + hover groups ------------------------------------------
     let hoverGroup = null;
 
@@ -187,8 +201,11 @@ export default class RaycasterController {
     if (this.mailbox?.setMailboxHoverState) {
       this.mailbox.setMailboxHoverState(false);
     }
+    // ADD THIS:
+    if (this.erhuInteraction) {
+      this.erhuInteraction.onHoverEnd();
+    }
   }
-
   /** Toggle the entire controller on/off */
   setEnabled(flag) {
     this.enabled = !!flag;
@@ -207,13 +224,17 @@ export default class RaycasterController {
   }
 
   /** Clear references (helps GC in SPA/Hot-reload flows) */
+  // In dispose(), add erhu cleanup:
   dispose() {
     this.objects = [];
     this.scaleTargets = [];
     this.outlinePass = null;
     this.mailbox = null;
+    if (this.erhuInteraction) {
+      this.erhuInteraction.dispose();
+      this.erhuInteraction = null;
+    }
   }
-
   /* ===================================================================
    *  CLICK DISPATCH  (formerly handleRaycasterInteraction in main.js)
    * =================================================================== */
