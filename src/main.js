@@ -102,7 +102,11 @@ function loadScene() {
     }
     const erhuMesh = glb.scene.getObjectByName("erhu-raycast-nine"); // Adjust name if needed
     if (erhuMesh) {
-      const erhuInteraction = new ErhuInteraction(appState.scene, erhuMesh);
+      const erhuInteraction = new ErhuInteraction(
+        appState.scene,
+        erhuMesh,
+        true
+      ); // true = show debug
       appState.erhuInteraction = erhuInteraction;
 
       // Attach to raycaster controller if it exists
