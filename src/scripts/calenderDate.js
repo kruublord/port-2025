@@ -1,4 +1,3 @@
-// calenderDate.js
 import * as THREE from "three";
 import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
@@ -13,11 +12,12 @@ export default class CalendarDate {
   constructor({
     parent,
     fontUrl = "/fonts/Sniglet_Regular.json",
-    size = 0.18, // a bit smaller
-    height = 0.035, // thin but with enough volume
-    color = 0xffffff, // let matcap drive color
+    size = 0.18,
+    height = 0.035,
+    // base tint in day mode
+    color = 0xffffff,
     offset = new THREE.Vector3(0, 0.02, 0.01),
-    letterSpacing = 0.02, // <── add this
+    letterSpacing = 0.02,
   } = {}) {
     if (!parent) {
       throw new Error("CalendarDate: parent Object3D is required.");
@@ -27,7 +27,6 @@ export default class CalendarDate {
     this.fontUrl = fontUrl;
     this.size = size;
     this.height = height;
-    this.color = color;
     this.offset = offset;
     this.letterSpacing = letterSpacing;
 
@@ -35,6 +34,18 @@ export default class CalendarDate {
     this.numberMesh = null;
     this.midnightTimeout = null;
 
+    // theme colors
+    this.dayColor = new THREE.Color(color);
+    this.nightColor = this.dayColor.clone().multiplyScalar(0.15); // darker, for night
+
+    // one shared material we just recolor
+    this.material = new THREE.MeshMatcapMaterial({
+      matcap: matcapTexture,
+      color: this.dayColor.clone(),
+      side: THREE.FrontSide,
+    });
+
+    // local anchor so you can move/rotate this separately from the parent
     this.anchor = new THREE.Object3D();
     this.parent.add(this.anchor);
     this.anchor.position.copy(this.offset);
@@ -57,6 +68,7 @@ export default class CalendarDate {
       }
     );
   }
+
   setNumber(value) {
     if (!this.font) return;
 
@@ -68,6 +80,9 @@ export default class CalendarDate {
       this.numberMesh = null;
     }
 
+    // ─────────────────────────────────────────
+    //  PER-CHAR GEOMETRIES FOR LETTER SPACING
+    // ─────────────────────────────────────────
     const charGeometries = [];
     let cursorX = 0;
 
@@ -94,7 +109,6 @@ export default class CalendarDate {
       charGeometries.push(charGeom);
     }
 
-    // merge all chars into one geometry
     let geometry = mergeGeometries(charGeometries, false);
 
     // center the whole string
@@ -104,24 +118,27 @@ export default class CalendarDate {
     const centerY = (bb.max.y + bb.min.y) / 2;
     geometry.translate(-centerX, -centerY, 0);
 
-    // orientation
+    // orientation for your calendar plane
     geometry.rotateZ(Math.PI / 2);
     geometry.rotateX(-Math.PI / 2);
 
-    // matcap material
-    const material = new THREE.MeshMatcapMaterial({
-      matcap: matcapTexture,
-      color: this.color,
-      side: THREE.FrontSide,
-    });
-
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, this.material);
     mesh.castShadow = false;
     mesh.receiveShadow = false;
     mesh.position.set(0, 0, 0);
 
     this.anchor.add(mesh);
     this.numberMesh = mesh;
+  }
+
+  /** Drive color from global mix (0 = day, 1 = night) */
+  updateFromMix(mix) {
+    if (!this.material) return;
+
+    const t = THREE.MathUtils.clamp(mix, 0, 1);
+
+    // start from dayColor and lerp towards nightColor
+    this.material.color.copy(this.dayColor).lerp(this.nightColor, t);
   }
 
   setToToday() {
@@ -153,7 +170,8 @@ export default class CalendarDate {
 
   _disposeMesh(mesh) {
     if (mesh.geometry) mesh.geometry.dispose();
-    if (mesh.material) {
+    // don't dispose this.material here – it's shared on the class
+    if (mesh.material && mesh.material !== this.material) {
       if (Array.isArray(mesh.material)) {
         mesh.material.forEach((m) => m.dispose && m.dispose());
       } else {

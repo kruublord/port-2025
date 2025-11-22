@@ -153,41 +153,34 @@ function loadScene() {
     // ─────────────────────────────────────────
     processScene(glb.scene); // applies theme materials (including peashooter)
     appState.scene.add(glb.scene);
+
     // ─────────────────────────────────────────
     //  CALENDAR 3D DATE SETUP
-    // ─────────────────────────────────────────
-    // ─────────────────────────────────────────
-    //  CALENDAR 3D DATE SETUP (uses cal-anchor)
-    // ─────────────────────────────────────────
-    // ─────────────────────────────────────────
-    //  CALENDAR 3D DATE SETUP (uses cal-anchor)
     // ─────────────────────────────────────────
     const calAnchor = glb.scene.getObjectByName("cal-anchor");
     console.log("cal-anchor:", calAnchor);
 
     if (calAnchor) {
       if (calAnchor.isMesh && calAnchor.material) {
-        // make the plane effectively invisible but keep children rendering
         calAnchor.material.transparent = true;
-        calAnchor.material.opacity = 0; // fully transparent
-        calAnchor.material.depthWrite = false; // so it doesn't occlude other stuff
-        // calAnchor.material.colorWrite = false; // optional: don't even write color
+        calAnchor.material.opacity = 0;
+        calAnchor.material.depthWrite = false;
       }
 
       const calendarDate = new CalendarDate({
         parent: calAnchor,
         fontUrl: "/fonts/Sniglet_Regular.json",
-        size: 0.13,
-        height: 0.025,
+        size: 0.14,
+        height: 0.02,
         color: 0xffffff,
         offset: new THREE.Vector3(0, 0, 0.01),
-        letterSpacing: 0.03, // increase or decrease to taste
+        letterSpacing: 0.025, // tweak this to widen / tighten
       });
 
       appState.calendarDate = calendarDate;
+
+      // initial theme + subscribe
       console.log("Calendar 3D date initialized on cal-anchor");
-    } else {
-      console.warn("Mesh 'cal-anchor' not found in GLB");
     }
 
     // ─────────────────────────────────────────

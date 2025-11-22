@@ -20,7 +20,8 @@ class ThemeManager {
 
     // Store themed meshes that need updating
     this.themedMeshes = [];
-
+    // 🔹 new
+    this.themeListeners = new Set();
     // Initialize event listeners
     this.initEventListeners();
   }
@@ -44,6 +45,7 @@ class ThemeManager {
     this.body.classList.toggle("light-theme", !this.isDarkMode);
 
     this.updateThreeJSTheme();
+    this._notifyThemeChange(); // 🔹 notify listeners (like the calendar)
   }
 
   updateThreeJSTheme() {

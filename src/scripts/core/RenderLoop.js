@@ -3,6 +3,8 @@ import appState from "../core/AppState.js";
 import clockManager from "../clock.js";
 import { updateRotatingObjects } from "../objectRotation.js";
 import * as THREE from "three";
+import themeManager from "../themeManager.js"; // ⬅️ add this
+
 function cursorUVOnPlane(plane, camera, ndcX, ndcY) {
   const origin = camera.position.clone();
   const dir = new THREE.Vector3(ndcX, ndcY, 0.5)
@@ -109,6 +111,9 @@ export default function createRenderLoop() {
     /* --- 8. Erhu Particles ---------------------------------------- */
     if (appState.erhuInteraction) {
       appState.erhuInteraction.update(dt);
+    }
+    if (appState.calendarDate) {
+      appState.calendarDate.updateFromMix(themeManager.uMixRatio.value);
     }
     /* --- 7. render passes ----------------------------------------- */
     appState.innerWeb.render();
