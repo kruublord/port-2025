@@ -7,6 +7,7 @@ import audioManager from "../audio.js";
 import { spinAnimation } from "../spinnyObjects.js";
 import { randomOink } from "../pig.js";
 import { imageData, socialLinks, BUTTON_IDS } from "../config/constants.js";
+import themeManager from "../themeManager.js";
 
 /**
  * Wrapper around THREE.Raycaster with a few built-in “hover helpers”.
@@ -255,6 +256,21 @@ export default class RaycasterController {
     if (isMugGroup && typeof appState.toggleMugLid === "function") {
       audioManager.playClick();
       appState.toggleMugLid();
+      return;
+    }
+
+    const isLightSwitchHit = (() => {
+      let cur = object;
+      while (cur) {
+        if (cur.name === "lightswitch-raycast-one") return true;
+        cur = cur.parent;
+      }
+      return false;
+    })();
+
+    if (isLightSwitchHit) {
+      audioManager.playClick();
+      themeManager.toggleTheme(); // calls your GSAP + shader blend
       return;
     }
 

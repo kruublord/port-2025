@@ -94,7 +94,7 @@ export const CAMERA_CONFIG = {
  * Whiteboard placement. Drawing plane should be positioned/rotated to this.
  */
 export const WHITEBOARD_CONFIG = {
-  position: new THREE.Vector3(-5.75, 4.337178707122803, 0.6635734438896179),
+  position: new THREE.Vector3(-5.95, 4.337178707122803, 0.575),
   rotation: new THREE.Euler(0, Math.PI / 2, 0),
 };
 
