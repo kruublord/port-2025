@@ -2,24 +2,22 @@
 import * as THREE from "three";
 import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+
+// load once, reuse for all instances
+const matcapTexture = new THREE.TextureLoader().load(
+  "/textures/matcap-blue2.png"
+);
 
 export default class CalendarDate {
-  /**
-   * @param {Object} options
-   * @param {THREE.Object3D} options.parent - Object to attach the date to (e.g. your calendar mesh or an anchor on its face)
-   * @param {string} [options.fontUrl] - Path to your .typeface.json font
-   * @param {number} [options.size] - Digit height (world units)
-   * @param {number} [options.height] - Extrusion depth
-   * @param {number} [options.color] - Mesh color (hex)
-   * @param {THREE.Vector3} [options.offset] - Local position offset on the parent
-   */
   constructor({
     parent,
     fontUrl = "/fonts/Sniglet_Regular.json",
-    size = 0.45,
-    height = 0.12,
-    color = 0xe06a6a,
-    offset = new THREE.Vector3(0, 0.02, 0.01), // slightly in front of the "paper"
+    size = 0.18, // a bit smaller
+    height = 0.035, // thin but with enough volume
+    color = 0xffffff, // let matcap drive color
+    offset = new THREE.Vector3(0, 0.02, 0.01),
+    letterSpacing = 0.02, // <── add this
   } = {}) {
     if (!parent) {
       throw new Error("CalendarDate: parent Object3D is required.");
@@ -31,12 +29,12 @@ export default class CalendarDate {
     this.height = height;
     this.color = color;
     this.offset = offset;
+    this.letterSpacing = letterSpacing;
 
     this.font = null;
     this.numberMesh = null;
     this.midnightTimeout = null;
 
-    // local anchor so you can move/rotate this separately from the parent
     this.anchor = new THREE.Object3D();
     this.parent.add(this.anchor);
     this.anchor.position.copy(this.offset);
@@ -59,59 +57,73 @@ export default class CalendarDate {
       }
     );
   }
-
-  /**
-   * Create/replace the 3D number mesh.
-   * @param {string|number} value - e.g. 1..31
-   */
   setNumber(value) {
     if (!this.font) return;
 
     const text = String(value);
 
-    // remove old mesh
     if (this.numberMesh) {
       this._disposeMesh(this.numberMesh);
       this.anchor.remove(this.numberMesh);
       this.numberMesh = null;
     }
 
-    const geometry = new TextGeometry(text, {
-      font: this.font,
-      size: this.size,
-      height: this.height,
-      curveSegments: 8,
-      bevelEnabled: true,
-      bevelThickness: this.height * 0.25,
-      bevelSize: this.size * 0.045,
-      bevelSegments: 2,
-    });
+    const charGeometries = [];
+    let cursorX = 0;
 
-    // center the geometry so it sits nicely in the middle
+    for (const ch of text) {
+      const charGeom = new TextGeometry(ch, {
+        font: this.font,
+        size: this.size,
+        height: this.height,
+        curveSegments: 8,
+        bevelEnabled: true,
+        bevelThickness: this.height * 0.4,
+        bevelSize: this.size * 0.06,
+        bevelSegments: 3,
+      });
+
+      charGeom.computeBoundingBox();
+      const bb = charGeom.boundingBox;
+      const charWidth = bb.max.x - bb.min.x;
+
+      // move this character to the current cursor position
+      charGeom.translate(cursorX - bb.min.x, 0, 0);
+      cursorX += charWidth + this.letterSpacing;
+
+      charGeometries.push(charGeom);
+    }
+
+    // merge all chars into one geometry
+    let geometry = mergeGeometries(charGeometries, false);
+
+    // center the whole string
     geometry.computeBoundingBox();
     const bb = geometry.boundingBox;
     const centerX = (bb.max.x + bb.min.x) / 2;
     const centerY = (bb.max.y + bb.min.y) / 2;
     geometry.translate(-centerX, -centerY, 0);
 
-    const material = new THREE.MeshStandardMaterial({
+    // orientation
+    geometry.rotateZ(Math.PI / 2);
+    geometry.rotateX(-Math.PI / 2);
+
+    // matcap material
+    const material = new THREE.MeshMatcapMaterial({
+      matcap: matcapTexture,
       color: this.color,
-      metalness: 0.1,
-      roughness: 0.6,
+      side: THREE.FrontSide,
     });
 
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.castShadow = true;
+    mesh.castShadow = false;
     mesh.receiveShadow = false;
-
-    // tiny additional offset to avoid z-fighting with the card
-    mesh.position.set(0, 0, 0.0);
+    mesh.position.set(0, 0, 0);
 
     this.anchor.add(mesh);
     this.numberMesh = mesh;
   }
 
-  /** Set mesh to today's local date (1–31) */
   setToToday() {
     const today = new Date().getDate();
     this.setNumber(today);
@@ -150,7 +162,6 @@ export default class CalendarDate {
     }
   }
 
-  /** Clean up when you remove the calendar */
   dispose() {
     if (this.midnightTimeout) clearTimeout(this.midnightTimeout);
     if (this.numberMesh) {

@@ -156,33 +156,38 @@ function loadScene() {
     // ─────────────────────────────────────────
     //  CALENDAR 3D DATE SETUP
     // ─────────────────────────────────────────
-    const calendarMesh = glb.scene.getObjectByName("cal-six");
+    // ─────────────────────────────────────────
+    //  CALENDAR 3D DATE SETUP (uses cal-anchor)
+    // ─────────────────────────────────────────
+    // ─────────────────────────────────────────
+    //  CALENDAR 3D DATE SETUP (uses cal-anchor)
+    // ─────────────────────────────────────────
+    const calAnchor = glb.scene.getObjectByName("cal-anchor");
+    console.log("cal-anchor:", calAnchor);
 
-    if (calendarMesh) {
-      // Create a small local anchor on the calendar mesh
-      const calendarAnchor = new THREE.Object3D();
-      calendarAnchor.name = "calendarDateAnchorRuntime";
-      calendarMesh.add(calendarAnchor);
-
-      // Position this anchor roughly on the calendar face
-      // (you'll tweak these values by eye)
-      calendarAnchor.position.set(0, 0.18, 0.08);
-      // If your calendar front is tilted, you can also rotate:
-      // calendarAnchor.rotation.set(0, 0, 0);
+    if (calAnchor) {
+      if (calAnchor.isMesh && calAnchor.material) {
+        // make the plane effectively invisible but keep children rendering
+        calAnchor.material.transparent = true;
+        calAnchor.material.opacity = 0; // fully transparent
+        calAnchor.material.depthWrite = false; // so it doesn't occlude other stuff
+        // calAnchor.material.colorWrite = false; // optional: don't even write color
+      }
 
       const calendarDate = new CalendarDate({
-        parent: calendarAnchor,
+        parent: calAnchor,
         fontUrl: "/fonts/Sniglet_Regular.json",
-        size: 0.25, // digit height – tweak to fit your cal-six size
-        height: 0.06, // thickness of the digits
-        color: 0xe06a6a,
-        offset: new THREE.Vector3(0, 0, 0.0), // anchor is already on the face
+        size: 0.13,
+        height: 0.025,
+        color: 0xffffff,
+        offset: new THREE.Vector3(0, 0, 0.01),
+        letterSpacing: 0.03, // increase or decrease to taste
       });
 
       appState.calendarDate = calendarDate;
-      console.log("Calendar 3D date initialized on cal-six");
+      console.log("Calendar 3D date initialized on cal-anchor");
     } else {
-      console.warn("Mesh 'cal-six' not found in GLB");
+      console.warn("Mesh 'cal-anchor' not found in GLB");
     }
 
     // ─────────────────────────────────────────

@@ -50,8 +50,8 @@ class CameraManager {
   setupControls() {
     // zoom / distance
     // un comment this mindist + max
-    this.controls.minDistance = 12;
-    this.controls.maxDistance = 35;
+    // this.controls.minDistance = 12;
+    // this.controls.maxDistance = 35;
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
 
