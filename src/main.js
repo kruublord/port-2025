@@ -28,6 +28,7 @@ import { initImageOverlay } from "./scripts/fadeOverlayImage.js";
 import { createSteamEffect } from "./scripts/shaders/steamEffect.js";
 import CursorOverlay from "./scripts/effects/CursorOverlay.js";
 import ErhuInteraction from "./scripts/erhu.js"; // ADD THIS
+import CalendarDate from "./scripts/calenderDate.js";
 
 // Configuration
 import {
@@ -152,6 +153,37 @@ function loadScene() {
     // ─────────────────────────────────────────
     processScene(glb.scene); // applies theme materials (including peashooter)
     appState.scene.add(glb.scene);
+    // ─────────────────────────────────────────
+    //  CALENDAR 3D DATE SETUP
+    // ─────────────────────────────────────────
+    const calendarMesh = glb.scene.getObjectByName("cal-six");
+
+    if (calendarMesh) {
+      // Create a small local anchor on the calendar mesh
+      const calendarAnchor = new THREE.Object3D();
+      calendarAnchor.name = "calendarDateAnchorRuntime";
+      calendarMesh.add(calendarAnchor);
+
+      // Position this anchor roughly on the calendar face
+      // (you'll tweak these values by eye)
+      calendarAnchor.position.set(0, 0.18, 0.08);
+      // If your calendar front is tilted, you can also rotate:
+      // calendarAnchor.rotation.set(0, 0, 0);
+
+      const calendarDate = new CalendarDate({
+        parent: calendarAnchor,
+        fontUrl: "/fonts/Sniglet_Regular.json",
+        size: 0.25, // digit height – tweak to fit your cal-six size
+        height: 0.06, // thickness of the digits
+        color: 0xe06a6a,
+        offset: new THREE.Vector3(0, 0, 0.0), // anchor is already on the face
+      });
+
+      appState.calendarDate = calendarDate;
+      console.log("Calendar 3D date initialized on cal-six");
+    } else {
+      console.warn("Mesh 'cal-six' not found in GLB");
+    }
 
     // ─────────────────────────────────────────
     //  EMBEDDED PEASHOOTER SETUP (NO EXTERNAL GLB)
