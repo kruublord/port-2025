@@ -1310,12 +1310,29 @@ lottie-player {
   color: #333;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   border: 2px solid rgba(74, 158, 255, 0.3);
-  pointer-events: auto;
+  pointer-events: none;
   z-index: 1002;
   transform-origin: center center;
   /* FIX: Use individual translate and scale properties */
   translate: var(--bubble-x, 0px) var(--bubble-y, 0px);
   scale: var(--bubble-scale, 0.5);
+}
+/* Bubble stays click-through */
+.speech-bubble {
+  pointer-events: none;
+}
+
+/* Controls container should NOT catch clicks */
+.speech-bubble .bubble-controls,
+.speech-bubble .bubble-buttons,
+.speech-bubble .step-indicator {
+  pointer-events: none;
+}
+
+/* Only the real clickable items catch clicks */
+.speech-bubble .bubble-btn,
+.tutorial-skip {
+  pointer-events: auto;
 }
 
 /* Your other styles for cursor-icon, buttons, etc. remain the same */

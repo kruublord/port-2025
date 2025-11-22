@@ -8,60 +8,52 @@ import * as THREE from "three";
  * Each entry feeds the fade-image overlay (src + caption).
  */
 export const imageData = {
-  "baby-cyrus-twelve-raycast": {
-    src: "images/bb-cyrus.webp",
+  "ac-card-ten-raycast": {
+    src: "images/ac-2.webp", // same as ac-card-twelve-raycast
     caption: "nimama",
   },
-  "ded-casper-twelve-raycast": {
-    src: "images/casper-buh.webp",
+  "baby-casper-ten-raycast": {
+    src: "images/caspuh.webp", // same as baby-casper-twelve-raycast
     caption: "nimama",
   },
-  "casper-pawty-twelve-raycast": {
-    src: "images/caspuh_party.webp",
+  "baby-cyrus-ten-raycast": {
+    src: "images/bb-cyrus.webp", // same as baby-cyrus-twelve-raycast
     caption: "nimama",
   },
-  "caspuh-frame-twelve-raycast": {
-    src: "images/caspuh2.webp",
+  "casp-cyrus-ten-raycast": {
+    src: "images/cc.webp", // same as casp-cyrus-twelve-raycast
     caption: "nimama",
   },
-  "baby-casper-twelve-raycast": {
-    src: "images/caspuh.webp",
+  "casper-lobster-ten-raycast": {
+    src: "images/lobster-casper.webp", // new image → fill in later
     caption: "nimama",
   },
-  "cat-twelve-raycast": {
-    src: "images/cat.webp",
+  "casper-pawty-ten-raycast": {
+    src: "images/caspuh_party.webp", // same as casper-pawty-twelve-raycast
     caption: "nimama",
   },
-  "casp-cyrus-twelve-raycast": {
-    src: "images/cc.webp",
+  "casper-sideeye-ten-raycast": {
+    src: "images/sussy-casper.webp", // new image → fill in later
     caption: "nimama",
   },
-  "collection-twelve-raycast": {
-    src: "images/collection.webp",
+  "casper-sleep-ten-raycast": {
+    src: "images/sleeper.webp", // new image → fill in later
     caption: "nimama",
   },
-  "cyrus-eating-0-twelve-raycast": {
-    src: "images/cyrus-eating-0.webp",
+  "caspuh-frame-ten-raycast": {
+    src: "images/caspuh2.webp", // same as caspuh-frame-twelve-raycast
     caption: "nimama",
   },
-  "cyrus-frame-twelve-raycast": {
-    src: "images/cyrus.webp",
+  "cyrus-frame-ten-raycast": {
+    src: "images/cyrus.webp", // same as cyrus-frame-twelve-raycast
     caption: "nimama",
   },
-  "ac-card-twelve-raycast": {
-    src: "images/ac-2.webp",
+  "ded-casper-ten-raycast": {
+    src: "images/casper-buh.webp", // same as ded-casper-twelve-raycast
     caption: "nimama",
   },
-  "goofy-casper-twelve-raycast": {
-    src: "images/lmao.webp",
-    caption: "nimama",
-  },
-  "shoes-twelve-raycast": {
-    src: "images/shoes.webp",
-    caption: "nimama",
-  },
-  "wolf_card-twelve-raycast": {
-    src: "images/wolf.webp",
+  "goofy-casper-ten-raycast": {
+    src: "images/lmao.webp", // same as goofy-casper-twelve-raycast
     caption: "nimama",
   },
 };
@@ -116,9 +108,9 @@ export const INNER_WEB_CONFIG = {
          src="https://inner-portfolio-js.vercel.app/"
          style="width:1200px;height:675px; border:0;border-radius:8px;"
        ></iframe>`,
-  position: new THREE.Vector3(-4.85, 3.2133445739746094, 0.14998430013656616),
+  position: new THREE.Vector3(-5.05, 3.2133445739746094, 0.057),
   rotation: new THREE.Euler(0, Math.PI / 2, 0),
-  scale: new THREE.Vector3(0.00137, 0.00137, 0.00137),
+  scale: new THREE.Vector3(0.0014, 0.0014, 0.0014),
 };
 
 /**

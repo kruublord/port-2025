@@ -131,7 +131,6 @@ class MusicNoteParticles {
       opacity: 0.0, // start invisible
       depthWrite: false,
       depthTest: false,
-      renderOrder: 999,
     });
 
     const sprite = new THREE.Sprite(material);

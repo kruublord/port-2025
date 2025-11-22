@@ -6,13 +6,15 @@ class CameraManager {
   constructor(camera, renderer, initialPosition, initialTarget) {
     this.camera = camera;
     this.renderer = renderer;
+    // Save default distance limits
+    this.defaultMinDistance = 12;
+    this.defaultMaxDistance = 35;
 
     // Set default camera positions and targets
     this.positions = {
       default: initialPosition || new THREE.Vector3(15.53, 11.14, 20.73),
       whiteboard: new THREE.Vector3(0.25, 4.38, -0.069),
-      monitor: new THREE.Vector3(-2, 4, -0.069),
-      // monitor: new THREE.Vector3(-5, 3.23, -0.53),
+      monitor: new THREE.Vector3(-5, 3.15, -0.069), // a bit closer on X
     };
 
     this.targets = {
@@ -46,16 +48,24 @@ class CameraManager {
   }
 
   setupControls() {
-    this.controls.minDistance = 0;
-    this.controls.maxDistance = 50;
+    // zoom / distance
+    // un comment this mindist + max
+    this.controls.minDistance = 12;
+    this.controls.maxDistance = 35;
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    // Remove any potential X-axis constraints
-    this.controls.minAzimuthAngle = -Infinity;
-    this.controls.maxAzimuthAngle = Infinity;
+
+    // rotation clamps (in radians!)
+    this.controls.minPolarAngle = THREE.MathUtils.degToRad(0); // up/down min
+    this.controls.maxPolarAngle = THREE.MathUtils.degToRad(90); // up/down max
+
+    this.controls.minAzimuthAngle = THREE.MathUtils.degToRad(0); // left/right min
+    this.controls.maxAzimuthAngle = THREE.MathUtils.degToRad(90); // left/right max
+
     this.controls.target.copy(this.targets.default);
     this.controls.update();
   }
+
   // Add this method to your CameraManager class
 
   /**
@@ -194,6 +204,7 @@ class CameraManager {
   update() {
     if (this.controls.enabled) {
       this.controls.update();
+      //  this.logDebugInfo(); // spam logs every frame
     }
   }
 
@@ -215,6 +226,7 @@ class CameraManager {
   }
 
   zoomToPosition(positionName, duration = 2, callback = null) {
+    // Disable user controls while animating
     this.controls.enabled = false;
 
     if (!this.positions[positionName]) {
@@ -227,16 +239,88 @@ class CameraManager {
       this.currentAnimation.kill();
     }
 
-    // Disable controls during animation
-    this.controls.enabled = false;
-
     const timeline = gsap.timeline({
       onComplete: () => {
         if (callback && typeof callback === "function") callback();
+        this.currentAnimation = null;
       },
     });
 
-    // If we a rotation is defined for this position
+    // ─────────────────────────────────────
+    // SPECIAL CASES: MONITOR & WHITEBOARD
+    // ─────────────────────────────────────
+    if (positionName === "monitor" || positionName === "whiteboard") {
+      const rotation =
+        this.rotations[positionName] || this.camera.rotation.clone();
+
+      // Center point you want to look at (board/monitor center)
+      const center = this.positions[positionName];
+
+      // "Forward" direction for the camera, based on that rotation
+      const forward = new THREE.Vector3(0, 0, -1)
+        .applyEuler(rotation)
+        .normalize();
+
+      // How far from the surface you want the camera
+      // (tweak these to taste)
+      const distance =
+        positionName === "monitor"
+          ? 2.2 // closer to monitor
+          : 3.0; // a bit further from whiteboard
+
+      // Camera position = center - forward * distance
+      const camPos = center
+        .clone()
+        .add(forward.clone().multiplyScalar(-distance));
+
+      // Animate camera to that position & rotation
+      timeline.to(
+        this.camera.position,
+        {
+          x: camPos.x,
+          y: camPos.y,
+          z: camPos.z,
+          duration,
+          ease: "power3.inOut",
+        },
+        0
+      );
+
+      timeline.to(
+        this.camera.rotation,
+        {
+          x: rotation.x,
+          y: rotation.y,
+          z: rotation.z,
+          duration,
+          ease: "power3.inOut",
+        },
+        0
+      );
+
+      // Target is the center; keep camera looking at it
+      timeline.to(
+        this.controls.target,
+        {
+          x: center.x,
+          y: center.y,
+          z: center.z,
+          duration,
+          ease: "power3.inOut",
+          onUpdate: () => {
+            this.camera.lookAt(this.controls.target);
+          },
+        },
+        0
+      );
+
+      this.currentAnimation = timeline;
+      return timeline;
+    }
+
+    // ─────────────────────────────────────
+    // DEFAULT LOGIC FOR OTHER POSITIONS
+    // ─────────────────────────────────────
     if (this.rotations[positionName]) {
       // Animate position
       timeline.to(
@@ -263,29 +347,6 @@ class CameraManager {
         },
         0
       );
-
-      if (positionName === "whiteboard" || positionName === "monitor") {
-        const direction = new THREE.Vector3(0, 0, -1);
-        direction.applyEuler(this.rotations[positionName]);
-
-        const targetPoint = new THREE.Vector3().copy(
-          this.positions[positionName]
-        );
-        targetPoint.add(direction.multiplyScalar(5));
-
-        timeline.to(
-          this.controls.target,
-          {
-            x: targetPoint.x,
-            y: targetPoint.y,
-            z: targetPoint.z,
-            duration: duration,
-            ease: "power3.inOut",
-            onUpdate: () => this.controls.update(),
-          },
-          0
-        );
-      }
     } else if (this.targets[positionName]) {
       // If we have a target but no rotation, animate position and controls target
       timeline.to(
@@ -325,10 +386,10 @@ class CameraManager {
       whiteboard.toggleWhiteboardMode(true);
     });
   }
+
   zoomToMonitor(duration = 2) {
-    // Use the built-in zoomToPosition for “whiteboard”
     this.zoomToPosition("monitor", duration, () => {
-      // Once camera is at whiteboard, enable drawing mode:
+      // controls stay disabled in monitor view
     });
   }
 
@@ -350,16 +411,27 @@ class CameraManager {
       this.currentAnimation.kill();
     }
 
+    // Disable controls while we animate back
     this.controls.enabled = false;
+
+    // Make sure target is the default center (no update yet!)
+    this.controls.target.copy(this.targets.default);
+
     const timeline = gsap.timeline({
       onComplete: () => {
-        // Re-enable controls
+        // Sync OrbitControls once at the end from current camera & target
+        this.controls.update();
+
         console.log("controls re-enabled");
         this.controls.enabled = true;
+
         if (callback && typeof callback === "function") callback();
+
+        this.currentAnimation = null;
       },
     });
 
+    // Animate camera position back to default
     timeline.to(
       this.camera.position,
       {
@@ -372,6 +444,7 @@ class CameraManager {
       0
     );
 
+    // Compute a quaternion that looks from default position to default target
     const lookAtVector = new THREE.Vector3()
       .subVectors(this.targets.default, this.positions.default)
       .normalize();
@@ -384,7 +457,7 @@ class CameraManager {
       )
     );
 
-    // Use quaternion slerp internally
+    // Animate camera rotation back
     timeline.to(
       this.camera.quaternion,
       {
@@ -394,20 +467,6 @@ class CameraManager {
         w: targetQuaternion.w,
         duration: duration,
         ease: "power2.inOut",
-      },
-      0
-    );
-
-    // Animate orbit controls target back to default
-    timeline.to(
-      this.controls.target,
-      {
-        x: this.targets.default.x,
-        y: this.targets.default.y,
-        z: this.targets.default.z,
-        duration: duration,
-        ease: "power2.inOut",
-        onUpdate: () => this.controls.update(),
       },
       0
     );
@@ -437,6 +496,20 @@ class CameraManager {
     if (this.currentAnimation) {
       this.currentAnimation.kill();
     }
+  }
+  logDebugInfo() {
+    const polar = THREE.MathUtils.radToDeg(this.controls.getPolarAngle());
+    const azimuth = THREE.MathUtils.radToDeg(this.controls.getAzimuthalAngle());
+    const distance = this.controls.getDistance();
+    const t = this.controls.target;
+
+    console.log(
+      `[CAMERA]
+  polar      : ${polar.toFixed(1)}°
+  azimuth    : ${azimuth.toFixed(1)}°
+  distance   : ${distance.toFixed(2)}
+  target (pan): x=${t.x.toFixed(2)}, y=${t.y.toFixed(2)}, z=${t.z.toFixed(2)}`
+    );
   }
 }
 
