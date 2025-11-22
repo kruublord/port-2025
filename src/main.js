@@ -81,17 +81,28 @@ function loadScene() {
     let mugOpenAction = null;
     let idleAction = null;
 
+    // ✅ create the action from the clip
     if (mugOpenClip) {
       mugOpenAction = mixer.clipAction(mugOpenClip);
       mugOpenAction.setLoop(THREE.LoopOnce);
       mugOpenAction.clampWhenFinished = true;
+
+      // ✅ register finished listener now that we HAVE an action
+      mixer.addEventListener("finished", (e) => {
+        if (!appState.mugAnimation) return;
+        if (e.action === mugOpenAction) {
+          appState.mugAnimation.isAnimating = false;
+          // optional debug:
+          // console.log("Mug animation finished");
+        }
+      });
     }
 
     if (idleClip) {
       idleAction = mixer.clipAction(idleClip);
       idleAction.setLoop(THREE.LoopRepeat);
       idleAction.clampWhenFinished = false;
-      idleAction.timeScale = 1;
+      idleAction.timeScale = 2; // 1.5x faster idle
       idleAction.play();
 
       console.log(
@@ -126,23 +137,32 @@ function loadScene() {
       action: mugOpenAction,
       duration: mugOpenClip ? mugOpenClip.duration : 0,
       isOpen: false,
+      isAnimating: false,
     };
 
     appState.toggleMugLid = () => {
       const data = appState.mugAnimation;
       if (!data || !data.action) return;
 
+      if (data.isAnimating) return; // ignore spam clicks
+
       const { action, duration } = data;
+
+      data.isAnimating = true;
       action.reset();
 
+      const MUG_SPEED = 2.0; // 2x faster
+
       if (data.isOpen) {
+        // closing: play backwards from end
         action.time = duration;
-        action.timeScale = -1;
-        data.isOpen = false;
+        action.timeScale = -MUG_SPEED;
+        data.isOpen = false; // ✅ mark as closed
       } else {
+        // opening: play forward from start
         action.time = 0;
-        action.timeScale = 1;
-        data.isOpen = true;
+        action.timeScale = MUG_SPEED;
+        data.isOpen = true; // ✅ mark as open
       }
 
       action.play();

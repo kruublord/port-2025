@@ -85,11 +85,11 @@ export default class Whiteboard {
     this.whiteboardGroup.add(this.whiteboardMesh);
     this.scene.add(this.whiteboardGroup);
   }
-
   setupEventListeners() {
     this.whiteboardButtons = document.querySelectorAll(
       ".circular-button-whiteboard"
     );
+
     this.whiteboardButtons.forEach((button) => {
       button.addEventListener("click", () => {
         this.changeWhiteboardColor(button.id);
@@ -99,11 +99,19 @@ export default class Whiteboard {
         button.classList.add("whiteboard-selected");
       });
     });
+
     const saveBtn = document.getElementById("saveWhiteboard");
     if (saveBtn) {
       saveBtn.addEventListener("click", () => this.downloadCanvasAsImage());
     }
-    this.activateControls(); // Call this to set up the bound functions, but they only fire when this.isActive is true.
+
+    // 🔹 Add this block for the Clear button
+    const clearBtn = document.getElementById("clear-whiteboard");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => this.clear());
+    }
+
+    this.activateControls();
   }
 
   onMouseDown(event) {
@@ -173,11 +181,20 @@ export default class Whiteboard {
 
   changeWhiteboardColor(key) {
     const config = {
-      "black-marker": { color: "black", lineWidth: 20 },
-      "red-marker": { color: "red", lineWidth: 20 },
-      "green-marker": { color: "darkgreen", lineWidth: 20 },
-      "blue-marker": { color: "blue", lineWidth: 20 },
-      eraser: { color: "white", lineWidth: 50 },
+      // charcoal “black”
+      "black-marker": { color: "#272A36", lineWidth: 20 },
+
+      // soft coral (was “red”)
+      "red-marker": { color: "#EC7A67", lineWidth: 20 },
+
+      // dusty teal (was “green”)
+      "green-marker": { color: "#4A9A92", lineWidth: 20 },
+
+      // sky blue
+      "blue-marker": { color: "#3E6FCC", lineWidth: 20 },
+
+      // eraser stays white, a bit thicker
+      eraser: { color: "#FFFFFF", lineWidth: 50 },
     };
 
     const { color, lineWidth } = config[key] || config["black-marker"];

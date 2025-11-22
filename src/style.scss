@@ -1095,7 +1095,7 @@ lottie-player {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 2px solid #333;
+  border: 2px solid #272a36; /* matches charcoal ink */
   cursor: pointer;
   transition: transform 0.3s ease;
 }
@@ -1105,28 +1105,28 @@ lottie-player {
 }
 
 .whiteboard-selected {
-  border: 3px solid #fff;
+  border: 3px solid #ffffff;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 }
 
 #black-marker {
-  background-color: black;
+  background-color: #272a36; /* charcoal */
 }
 
 #red-marker {
-  background-color: red;
+  background-color: #ec7a67; /* soft coral */
 }
 
 #green-marker {
-  background-color: darkgreen;
+  background-color: #4a9a92; /* dusty teal */
 }
 
 #blue-marker {
-  background-color: blue;
+  background-color: #3e6fcc; /* sky blue */
 }
 
 #eraser {
-  background-color: white;
+  background-color: #ffffff; /* white eraser */
 }
 
 .whiteboard-btn,
