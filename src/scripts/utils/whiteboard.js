@@ -56,7 +56,7 @@ export default class Whiteboard {
       );
       if (this.canvasTexture) this.canvasTexture.needsUpdate = true;
     };
-    img.src = "/textures/drawing.png";
+    img.src = "/textures/whiteboard.png";
   }
 
   createWhiteboardMesh() {
@@ -66,9 +66,12 @@ export default class Whiteboard {
     this.canvasTexture.generateMipmaps = true;
     this.canvasTexture.magFilter = THREE.LinearFilter;
     this.canvasTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    this.canvasTexture.colorSpace = THREE.SRGBColorSpace;
 
     this.whiteboardMaterial = new THREE.MeshBasicMaterial({
       map: this.canvasTexture,
+      toneMapped: false, // ⬅️ bypass ACES for this material
+      fog: false, // ⬅️ optional: ignore scene fog
     });
 
     const whiteboardGeom = new THREE.PlaneGeometry(
@@ -181,17 +184,20 @@ export default class Whiteboard {
 
   changeWhiteboardColor(key) {
     const config = {
-      // charcoal “black”
-      "black-marker": { color: "#272A36", lineWidth: 20 },
+      // black
+      "black-marker": { color: "#3E413D", lineWidth: 20 },
 
-      // soft coral (was “red”)
-      "red-marker": { color: "#EC7A67", lineWidth: 20 },
+      // blue
+      "blue-marker": { color: "#6DAAB8", lineWidth: 20 },
 
-      // dusty teal (was “green”)
-      "green-marker": { color: "#4A9A92", lineWidth: 20 },
+      // green
+      "green-marker": { color: "#85AA88", lineWidth: 20 },
 
-      // sky blue
-      "blue-marker": { color: "#3E6FCC", lineWidth: 20 },
+      // red
+      "red-marker": { color: "#EA7751", lineWidth: 20 },
+
+      // orange
+      "orange-marker": { color: "#F2AB4D", lineWidth: 20 },
 
       // eraser stays white, a bit thicker
       eraser: { color: "#FFFFFF", lineWidth: 50 },

@@ -1095,7 +1095,7 @@ lottie-player {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 2px solid #272a36; /* matches charcoal ink */
+  border: 2px solid #3e413d; /* dark “black” border */
   cursor: pointer;
   transition: transform 0.3s ease;
 }
@@ -1110,23 +1110,35 @@ lottie-player {
 }
 
 #black-marker {
-  background-color: #272a36; /* charcoal */
-}
-
-#red-marker {
-  background-color: #ec7a67; /* soft coral */
-}
-
-#green-marker {
-  background-color: #4a9a92; /* dusty teal */
+  background-color: #3e413d;
 }
 
 #blue-marker {
-  background-color: #3e6fcc; /* sky blue */
+  background-color: #6daab8;
+}
+
+#green-marker {
+  background-color: #85aa88;
+}
+
+#red-marker {
+  background-color: #ea7751;
+}
+
+#orange-marker {
+  background-color: #f2ab4d;
 }
 
 #eraser {
-  background-color: #ffffff; /* white eraser */
+  background-color: #ffffff;
+}
+/* make all paintbrush icons white */
+.circular-button-whiteboard i.fa-paintbrush {
+  color: #ffffffe0;
+}
+/* keep the eraser icon dark for contrast */
+#eraser i {
+  color: #3e413d; /* or any dark color you like */
 }
 
 .whiteboard-btn,

@@ -105,7 +105,7 @@ export const WHITEBOARD_CONFIG = {
  */
 export const INNER_WEB_CONFIG = {
   html: `<iframe
-         src="https://inner-portfolio-js.vercel.app/"
+         src="https://port-inner.vercel.app/"
          style="width:1200px;height:675px; border:0;border-radius:8px;"
        ></iframe>`,
   position: new THREE.Vector3(-5.05, 3.2133445739746094, 0.057),

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "./utils/OrbitControls.js";
 import gsap from "gsap";
+import { WHITEBOARD_CONFIG } from "./config/constants.js"; // adjust path if needed
 
 class CameraManager {
   constructor(camera, renderer, initialPosition, initialTarget) {
@@ -10,11 +11,10 @@ class CameraManager {
     this.defaultMinDistance = 12;
     this.defaultMaxDistance = 35;
 
-    // Set default camera positions and targets
     this.positions = {
       default: initialPosition || new THREE.Vector3(15.53, 11.14, 20.73),
-      whiteboard: new THREE.Vector3(0.25, 4.38, -0.069),
-      monitor: new THREE.Vector3(-5, 3.15, -0.069), // a bit closer on X
+      whiteboard: WHITEBOARD_CONFIG.position.clone(), // 🔹 use real board center
+      monitor: new THREE.Vector3(-5, 3.15, -0.069),
     };
 
     this.targets = {
@@ -22,18 +22,8 @@ class CameraManager {
     };
 
     this.rotations = {
-      whiteboard: new THREE.Euler(
-        0, // x-axis (0 degrees)
-        Math.PI / 2, // y-axis (90 degrees)
-        0, // z-axis (0 degrees)
-        "XYZ" // rotation order
-      ),
-      monitor: new THREE.Euler(
-        0, // x-axis (0 degrees)
-        Math.PI / 2, // y-axis (90 degrees)
-        0, // z-axis (0 degrees)
-        "XYZ" // rotation order
-      ),
+      whiteboard: WHITEBOARD_CONFIG.rotation.clone(), // 🔹 use board rotation
+      monitor: new THREE.Euler(0, Math.PI / 2, 0, "XYZ"),
     };
 
     // Initialize camera position
@@ -265,8 +255,10 @@ class CameraManager {
       // (tweak these to taste)
       const distance =
         positionName === "monitor"
-          ? 2.2 // closer to monitor
-          : 3.0; // a bit further from whiteboard
+          ? 2.2
+          : positionName === "whiteboard"
+            ? 2.5 // 🔹 closer to the board
+            : 3.0;
 
       // Camera position = center - forward * distance
       const camPos = center
