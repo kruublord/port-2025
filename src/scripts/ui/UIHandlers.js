@@ -69,11 +69,30 @@ export function initSidePanel() {
 }
 
 export function initBackButton() {
-  document
-    .getElementById(BUTTON_IDS.backButton)
-    .addEventListener("click", () => {
+  const backBtn = document.getElementById(BUTTON_IDS.backButton);
+  if (!backBtn) return;
+
+  backBtn.addEventListener("click", (e) => {
+    // 🔹 Important: stop this click from reaching window → RaycasterController
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 🔹 Exit whiteboard mode if it's active
+    if (appState.whiteboard?.whiteboardModeOn) {
       appState.whiteboard.toggleWhiteboardMode(false);
+    }
+
+    // 🔹 Exit monitor/iframe mode if it's active
+    if (appState.innerWeb) {
       appState.innerWeb.disableIframe();
-      appState.cameraManager.resetToDefault();
-    });
+    }
+
+    // 🔹 Reset camera to your default view
+    appState.cameraManager?.resetToDefault?.();
+
+    // 🔹 Clear any leftover hover outlines / state
+    appState.raycasterController?.clearHover?.();
+
+    backBtn.style.display = "none";
+  });
 }

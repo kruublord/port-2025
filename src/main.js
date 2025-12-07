@@ -117,7 +117,7 @@ function loadScene() {
       const erhuInteraction = new ErhuInteraction(
         appState.scene,
         erhuMesh,
-        true
+        false
       ); // true = show debug
       appState.erhuInteraction = erhuInteraction;
 
@@ -305,16 +305,16 @@ document.addEventListener("keydown", (event) => {
  * ===================================================================
  */
 
-function setupSteamEffect() {
-  appState.textureLoader.load(STEAM_CONFIG.texture.src, (tex) => {
-    tex.wrapS = STEAM_CONFIG.texture.wrapS;
-    tex.wrapT = STEAM_CONFIG.texture.wrapT;
-    const steamMesh = createSteamEffect(tex, STEAM_CONFIG.geometry);
-    steamMesh.position.copy(STEAM_CONFIG.position);
-    appState.setSteamMesh(steamMesh);
-    appState.scene.add(steamMesh);
-  });
-}
+// function setupSteamEffect() {
+//   appState.textureLoader.load(STEAM_CONFIG.texture.src, (tex) => {
+//     tex.wrapS = STEAM_CONFIG.texture.wrapS;
+//     tex.wrapT = STEAM_CONFIG.texture.wrapT;
+//     const steamMesh = createSteamEffect(tex, STEAM_CONFIG.geometry);
+//     steamMesh.position.copy(STEAM_CONFIG.position);
+//     appState.setSteamMesh(steamMesh);
+//     appState.scene.add(steamMesh);
+//   });
+// }
 
 /**
  * Toggle steam effect visibility
@@ -641,7 +641,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadScene();
   // loadPeashooter();
 
-  setupSteamEffect();
+  // setupSteamEffect();
   // right after setupSteamEffect() or wherever you want the loop to begin
   const renderLoop = createRenderLoop({ introTutorial });
   renderLoop.start();

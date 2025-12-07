@@ -1,5 +1,4 @@
 import { Howl } from "howler";
-
 class AudioManager {
   constructor() {
     if (typeof window !== "undefined" && AudioManager._instance) {
@@ -19,20 +18,21 @@ class AudioManager {
       volume: 1.0,
     });
 
-    // Erhu hover sound - short melodic loop
-    this.erhu = new Howl({
-      src: ["audio/erhu.mp3"],
-      loop: true,
-      volume: 0.0, // Start at 0 for fade in
-    });
+    // Multiple erhu sounds
+    this.erhuSounds = [
+      new Howl({ src: ["audio/erhu.mp3"], loop: true, volume: 0.0 }),
+      new Howl({ src: ["audio/lantingxu.mp3"], loop: true, volume: 0.0 }),
+      new Howl({ src: ["audio/yuxia-short.mp3"], loop: true, volume: 0.0 }),
+    ];
 
+    this.currentErhu = null;
     this.erhuFadeInterval = null;
     this.bgmFadeInterval = null;
-    this.originalBGMVolume = 1.0; // Store original BGM volume
+    this.originalBGMVolume = 1.0;
   }
 
   playBGM(volume = 1.0) {
-    this.originalBGMVolume = volume; // Remember the volume we want
+    this.originalBGMVolume = volume;
     this.bgm.volume(volume);
     if (!this.bgm.playing()) this.bgm.play();
   }
@@ -47,9 +47,7 @@ class AudioManager {
     this.click.play();
   }
 
-  // Fade BGM to a target volume
   fadeBGM(targetVolume, fadeDuration = 500) {
-    // Clear any existing BGM fade
     if (this.bgmFadeInterval) {
       clearInterval(this.bgmFadeInterval);
     }
@@ -73,18 +71,26 @@ class AudioManager {
     }, stepTime);
   }
 
-  // Fade in erhu sound on hover + pause BGM
   playErhu(targetVolume = 0.3, fadeDuration = 300) {
+    // CRITICAL: Stop any currently playing erhu completely first
+    if (this.currentErhu && this.currentErhu.playing()) {
+      this.currentErhu.stop();
+      this.currentErhu.volume(0);
+    }
+
     // Clear any existing fade
     if (this.erhuFadeInterval) {
       clearInterval(this.erhuFadeInterval);
+      this.erhuFadeInterval = null;
     }
 
-    // Start playing if not already
-    if (!this.erhu.playing()) {
-      this.erhu.volume(0);
-      this.erhu.play();
-    }
+    // Pick a random erhu sound
+    const randomIndex = Math.floor(Math.random() * this.erhuSounds.length);
+    this.currentErhu = this.erhuSounds[randomIndex];
+
+    // Start playing the new sound
+    this.currentErhu.volume(0);
+    this.currentErhu.play();
 
     // Fade out and pause BGM
     const bgmCurrentVolume = this.bgm.volume();
@@ -103,7 +109,7 @@ class AudioManager {
 
       if (bgmStep >= bgmSteps) {
         clearInterval(bgmFadeOut);
-        this.bgm.pause(); // Pause BGM completely
+        this.bgm.pause();
       }
     }, bgmStepTime);
 
@@ -116,7 +122,9 @@ class AudioManager {
     this.erhuFadeInterval = setInterval(() => {
       currentStep++;
       const newVolume = Math.min(volumeStep * currentStep, targetVolume);
-      this.erhu.volume(newVolume);
+      if (this.currentErhu) {
+        this.currentErhu.volume(newVolume);
+      }
 
       if (currentStep >= steps) {
         clearInterval(this.erhuFadeInterval);
@@ -125,15 +133,38 @@ class AudioManager {
     }, stepTime);
   }
 
-  // Fade out erhu sound on mouse leave + restore BGM slowly
   stopErhu(fadeDuration = 300) {
+    if (!this.currentErhu) return;
+
+    // Capture reference to the erhu we're stopping
+    const erhuToStop = this.currentErhu;
+
+    // Clear the current erhu reference immediately to prevent re-use
+    this.currentErhu = null;
+
     // Clear any existing fade
     if (this.erhuFadeInterval) {
       clearInterval(this.erhuFadeInterval);
+      this.erhuFadeInterval = null;
+    }
+
+    // Get current volume before fading
+    const currentVolume = erhuToStop.volume();
+
+    // If volume is already 0 or not playing, just stop immediately
+    if (currentVolume === 0 || !erhuToStop.playing()) {
+      erhuToStop.stop();
+
+      // Resume BGM
+      if (!this.bgm.playing()) {
+        this.bgm.volume(0);
+        this.bgm.play();
+      }
+      this.fadeBGM(this.originalBGMVolume, 1500);
+      return;
     }
 
     // Fade out erhu
-    const currentVolume = this.erhu.volume();
     const steps = 20;
     const stepTime = fadeDuration / steps;
     const volumeStep = currentVolume / steps;
@@ -142,19 +173,20 @@ class AudioManager {
     this.erhuFadeInterval = setInterval(() => {
       currentStep++;
       const newVolume = Math.max(currentVolume - volumeStep * currentStep, 0);
-      this.erhu.volume(newVolume);
+      erhuToStop.volume(newVolume);
 
       if (currentStep >= steps) {
         clearInterval(this.erhuFadeInterval);
         this.erhuFadeInterval = null;
-        this.erhu.stop(); // Stop playback when fully faded
+        erhuToStop.stop(); // Make sure it stops
+        erhuToStop.volume(0); // Reset volume
 
-        // After erhu stops, resume BGM with slower fade in (1500ms)
+        // Resume BGM
         if (!this.bgm.playing()) {
           this.bgm.volume(0);
           this.bgm.play();
         }
-        this.fadeBGM(this.originalBGMVolume, 1500); // 1.5 second fade in
+        this.fadeBGM(this.originalBGMVolume, 1500);
       }
     }, stepTime);
   }

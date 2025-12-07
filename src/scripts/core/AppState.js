@@ -11,7 +11,7 @@ class AppState {
      * DEBUGGING STATE
      * - Manually toggle this property to enable/disable debug features.
      * ─────────────────────────────────── */
-    this.isDebugMode = true; // <-- SET TO `true` to debug, `false` for production
+    this.isDebugMode = false; // <-- SET TO `true` to debug, `false` for production
 
     if (this.isDebugMode) {
       console.log(

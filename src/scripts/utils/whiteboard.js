@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import appState from "../core/AppState.js"; // ⬅️ same path as RaycasterController
 
 export default class Whiteboard {
   constructor(scene, camera, renderer, controls) {
@@ -254,17 +255,31 @@ export default class Whiteboard {
   toggleWhiteboardMode(enable) {
     this.whiteboardModeOn = enable;
 
+    // 🔹 Turn global scene raycasting on/off
+    if (enable) {
+      appState.disableRaycast(); // no scene hovers/clicks while drawing
+    } else {
+      appState.enableRaycast(); // restore normal interactions
+    }
+
+    // 🔹 OrbitControls on/off
     if (this.controls) {
       this.controls.enabled = !enable; // Disable controls when whiteboard mode is on
     }
-    this.backButton.style.display = enable ? "block" : "none";
-    // Activate or deactivate drawing event listeners based on mode.  Use the this.isActive flag.
+
+    // 🔹 Back button visibility
+    if (this.backButton) {
+      this.backButton.style.display = enable ? "block" : "none";
+    }
+
+    // 🔹 Attach/detach whiteboard drawing listeners
     if (enable) {
       this.activateControls(); // Ensure controls are set up
     } else {
       this.deactivateControls();
     }
 
+    // 🔹 Whiteboard UI panel
     const whiteboardUI = document.querySelector(".whiteboard-controls");
     if (whiteboardUI) {
       whiteboardUI.style.display = enable ? "flex" : "none";

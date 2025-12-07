@@ -3,6 +3,7 @@ import {
   CSS3DRenderer,
   CSS3DObject,
 } from "three/examples/jsm/renderers/CSS3DRenderer.js";
+import appState from "./core/AppState.js"; // ⬅️ adjust path if needed
 
 export function initInnerWeb(
   scene,
@@ -90,18 +91,24 @@ export function initInnerWeb(
   function enableIframe() {
     wrapper.style.pointerEvents = "auto";
     cssRenderer.domElement.style.pointerEvents = "auto"; // Allow pointer events through this layer
+    cssRenderer.domElement.style.zIndex = 2; // on top of 3D
+
+    // 🔹 ENTER MONITOR MODE: freeze scene interactions + cursor FX
+    appState.disableRaycast();
+
     console.log("enableIframe called - iframe is now interactive");
-    cssRenderer.domElement.style.zIndex = 2; // CSS3D BELOW
   }
 
   function disableIframe() {
     wrapper.style.pointerEvents = "none";
     cssRenderer.domElement.style.pointerEvents = "none";
-    cssRenderer.domElement.style.zIndex = 0; // CSS3D BELOW
+    cssRenderer.domElement.style.zIndex = 0; // back under 3D
+
+    // 🔹 EXIT MONITOR MODE: restore scene interactions + cursor FX
+    appState.enableRaycast();
 
     console.log("disableIframe called - iframe is now non-interactive");
   }
-
   function toggleIframe() {
     const newState = wrapper.style.pointerEvents === "none" ? "auto" : "none";
     wrapper.style.pointerEvents = newState;

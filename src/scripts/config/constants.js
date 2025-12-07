@@ -10,51 +10,51 @@ import * as THREE from "three";
 export const imageData = {
   "ac-card-ten-raycast": {
     src: "images/ac-2.webp", // same as ac-card-twelve-raycast
-    caption: "nimama",
+    caption: "my acnh villagers",
   },
   "baby-casper-ten-raycast": {
     src: "images/caspuh.webp", // same as baby-casper-twelve-raycast
-    caption: "nimama",
+    caption: "casper as a puppy",
   },
   "baby-cyrus-ten-raycast": {
     src: "images/bb-cyrus.webp", // same as baby-cyrus-twelve-raycast
-    caption: "nimama",
+    caption: "my pet bunny",
   },
   "casp-cyrus-ten-raycast": {
     src: "images/cc.webp", // same as casp-cyrus-twelve-raycast
-    caption: "nimama",
+    caption: "my two best friends",
   },
   "casper-lobster-ten-raycast": {
     src: "images/lobster-casper.webp", // new image → fill in later
-    caption: "nimama",
+    caption: "posture pal on my dog's head",
   },
   "casper-pawty-ten-raycast": {
     src: "images/caspuh_party.webp", // same as casper-pawty-twelve-raycast
-    caption: "nimama",
+    caption: "my dog's 4th birthday 🎉",
   },
   "casper-sideeye-ten-raycast": {
     src: "images/sussy-casper.webp", // new image → fill in later
-    caption: "nimama",
+    caption: "Casper side eyeing me",
   },
   "casper-sleep-ten-raycast": {
     src: "images/sleeper.webp", // new image → fill in later
-    caption: "nimama",
+    caption: "i finally let my dog on the bed",
   },
   "caspuh-frame-ten-raycast": {
     src: "images/caspuh2.webp", // same as caspuh-frame-twelve-raycast
-    caption: "nimama",
+    caption: "he looks so goofy",
   },
   "cyrus-frame-ten-raycast": {
     src: "images/cyrus.webp", // same as cyrus-frame-twelve-raycast
-    caption: "nimama",
+    caption: "hello there",
   },
   "ded-casper-ten-raycast": {
     src: "images/casper-buh.webp", // same as ded-casper-twelve-raycast
-    caption: "nimama",
+    caption: "buh",
   },
   "goofy-casper-ten-raycast": {
     src: "images/lmao.webp", // same as goofy-casper-twelve-raycast
-    caption: "nimama",
+    caption: "he looks so goofy",
   },
 };
 

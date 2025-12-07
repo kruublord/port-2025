@@ -1,4 +1,6 @@
 // scripts/ui/CursorOverlay.js
+import appState from "../core/AppState.js"; // adjust path if needed
+
 export default class CursorOverlay {
   constructor({
     mode = "paw",
@@ -26,7 +28,7 @@ export default class CursorOverlay {
     this.running = false;
     this.zIndex = zIndex;
     this.domEl =
-      domElement || (window.appState?.renderer?.domElement ?? document.body);
+      domElement || (appState?.renderer?.domElement ?? document.body);
 
     /* -------- canvas -------- */
     this.canvas = document.createElement("canvas");
@@ -52,6 +54,8 @@ export default class CursorOverlay {
     this._onMove = (e) => {
       this.pos.x = e.clientX;
       this.pos.y = e.clientY;
+      if (!this._isOverlayActive()) return;
+
       if (this._down && !this._down.shown) {
         const dx = e.clientX - this._down.x;
         const dy = e.clientY - this._down.y;
@@ -74,6 +78,8 @@ export default class CursorOverlay {
     /* pointerdown → HUD only if the press began on the renderer element */
     this._onDown = (e) => {
       if (!this._isOnDomEl(e) || e.defaultPrevented) return;
+      if (!this._isOverlayActive()) return;
+
       // block if caller says this click is for UI/object interaction
       if (this.shouldSuppress?.(e)) return;
 
@@ -120,6 +126,8 @@ export default class CursorOverlay {
     /* wheel → show zoom HUD only over renderer (non-passive on element) */
     this._onWheel = (e) => {
       if (!this._isOnDomEl(e)) return;
+      if (!this._isOverlayActive()) return;
+
       const dir = e.deltaY < 0 ? +1 : -1;
       this._gizmoPulseZoom(dir);
       // NOTE: do not call preventDefault here; OrbitControls will do it itself
@@ -261,6 +269,15 @@ export default class CursorOverlay {
       lastAng: 0,
     };
   }
+
+  /** Cursor FX are only allowed when overlay is enabled AND raycast is on */
+  /** Cursor FX are only allowed when overlay is enabled AND raycast is on */
+  _isOverlayActive() {
+    const raycastOn = appState?.isRaycastEnabled;
+    // if appState isn't there yet, default to true to avoid breaking things
+    return this.enabled && (raycastOn ?? true);
+  }
+
   _loadGizmoIcons(urls) {
     const fixCors = (url) => {
       // If same-origin path (starts with "/"), don’t set crossOrigin
@@ -359,6 +376,17 @@ export default class CursorOverlay {
 
     const dt = Math.max(0.001, (t - this._lastT) / 1000);
     this._lastT = t;
+
+    // If raycast is disabled (whiteboard/monitor mode), skip ALL FX rendering.
+    if (!this._isOverlayActive()) {
+      // keep positions in sync so velocity doesn’t explode when we come back
+      this.lastPos.x = this.pos.x;
+      this.lastPos.y = this.pos.y;
+      this.ctx.clearRect(0, 0, innerWidth, innerHeight);
+      requestAnimationFrame(this._loop);
+      return;
+    }
+
     this.ctx.clearRect(0, 0, innerWidth, innerHeight);
 
     // velocity
@@ -373,12 +401,33 @@ export default class CursorOverlay {
     const dx = this.pos.x - this.lastPos.x;
     const dy = this.pos.y - this.lastPos.y;
     const dFrame = Math.hypot(dx, dy);
+    // Replace the paw trail section in your _loop method with this:
+
     if (this.mode === "paw" && !this._isGizmoActive()) {
       // accumulate distance and drop stamps at fixed spacing
       this.paw.acc += dFrame;
 
-      // movement direction (radians)
-      const ang = Math.atan2(dy, dx);
+      // movement direction (radians) - only calculate if moving meaningfully
+      let ang = this.paw.lastAng; // default to last known direction
+      if (dFrame > 0.5) {
+        // threshold to avoid jitter
+        ang = Math.atan2(dy, dx);
+
+        // handle angle wrapping for smooth interpolation
+        let diff = ang - this.paw.lastAng;
+        // normalize to [-π, π]
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+
+        // smooth heading with faster response for sharp turns
+        const turnSharpness = Math.abs(diff);
+        const baseSpeed = 25; // increased from 20
+        const sharpTurnBoost = 15; // extra speed for sharp turns
+        const λ = baseSpeed + sharpTurnBoost * (turnSharpness / Math.PI);
+        const ease = 1 - Math.exp(-dt * λ);
+
+        this.paw.lastAng += diff * ease;
+      }
 
       // speed-influenced size
       const base = this.style.pawSize;
@@ -392,20 +441,13 @@ export default class CursorOverlay {
         const jx = (Math.random() - 0.5) * 2 * this.style.pawJitter;
         const jy = (Math.random() - 0.5) * 2 * this.style.pawJitter;
 
-        // side offset perpendicular to direction
-        const nx = -Math.sin(ang);
-        const ny = Math.cos(ang);
+        // side offset perpendicular to direction (use smoothed angle)
+        const nx = -Math.sin(this.paw.lastAng);
+        const ny = Math.cos(this.paw.lastAng);
         const sideOffset = base * 0.35 * this.paw.side;
 
         const x = this.pos.x + nx * sideOffset + jx;
         const y = this.pos.y + ny * sideOffset + jy;
-
-        // movement direction (radians)
-        const rawAng = Math.atan2(dy, dx);
-
-        // smooth heading so tiny jitters don't flip the paw
-        const ease = 1 - Math.exp(-dt * 20); // responsiveness
-        this.paw.lastAng += (rawAng - this.paw.lastAng) * ease;
 
         // final yaw = travel dir + fixed forward offset + left/right skew
         const yaw =
