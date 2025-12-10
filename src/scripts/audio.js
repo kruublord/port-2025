@@ -72,11 +72,13 @@ class AudioManager {
   }
 
   playErhu(targetVolume = 0.3, fadeDuration = 300) {
-    // CRITICAL: Stop any currently playing erhu completely first
-    if (this.currentErhu && this.currentErhu.playing()) {
-      this.currentErhu.stop();
-      this.currentErhu.volume(0);
-    }
+    // CRITICAL: Stop ALL erhu sounds completely first to prevent overlap
+    this.erhuSounds.forEach((sound) => {
+      if (sound.playing()) {
+        sound.stop();
+        sound.volume(0);
+      }
+    });
 
     // Clear any existing fade
     if (this.erhuFadeInterval) {

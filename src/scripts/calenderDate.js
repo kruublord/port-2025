@@ -13,7 +13,7 @@ export default class CalendarDate {
     parent,
     fontUrl = "/fonts/Sniglet_Regular.json",
     size = 0.18,
-    height = 0.035,
+    height = 0.02,
     // base tint in day mode
     color = 0xffffff,
     offset = new THREE.Vector3(0, 0.02, 0.01),

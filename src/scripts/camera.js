@@ -216,7 +216,6 @@ class CameraManager {
   }
 
   zoomToPosition(positionName, duration = 2, callback = null) {
-    // Disable user controls while animating
     this.controls.enabled = false;
 
     if (!this.positions[positionName]) {
@@ -224,13 +223,19 @@ class CameraManager {
       return null;
     }
 
-    // Stop any current animation
     if (this.currentAnimation) {
       this.currentAnimation.kill();
     }
 
+    // 🔹 Store current quaternion as starting point
+    const startQuat = this.camera.quaternion.clone();
+
     const timeline = gsap.timeline({
       onComplete: () => {
+        if (positionName !== "monitor" && positionName !== "whiteboard") {
+          this.controls.update();
+        }
+
         if (callback && typeof callback === "function") callback();
         this.currentAnimation = null;
       },
@@ -240,32 +245,19 @@ class CameraManager {
     // SPECIAL CASES: MONITOR & WHITEBOARD
     // ─────────────────────────────────────
     if (positionName === "monitor" || positionName === "whiteboard") {
-      const rotation =
-        this.rotations[positionName] || this.camera.rotation.clone();
-
-      // Center point you want to look at (board/monitor center)
       const center = this.positions[positionName];
-
-      // "Forward" direction for the camera, based on that rotation
+      const rotation = this.rotations[positionName];
       const forward = new THREE.Vector3(0, 0, -1)
         .applyEuler(rotation)
         .normalize();
 
-      // How far from the surface you want the camera
-      // (tweak these to taste)
-      const distance =
-        positionName === "monitor"
-          ? 2.2
-          : positionName === "whiteboard"
-            ? 2.5 // 🔹 closer to the board
-            : 3.0;
-
-      // Camera position = center - forward * distance
+      const distance = positionName === "monitor" ? 2.2 : 2.5;
       const camPos = center
         .clone()
         .add(forward.clone().multiplyScalar(-distance));
 
-      // Animate camera to that position & rotation
+      const targetQuat = new THREE.Quaternion().setFromEuler(rotation);
+
       timeline.to(
         this.camera.position,
         {
@@ -278,19 +270,20 @@ class CameraManager {
         0
       );
 
+      // 🔹 USE QUATERNION INSTEAD OF LOOKAT
       timeline.to(
-        this.camera.rotation,
+        this.camera.quaternion,
         {
-          x: rotation.x,
-          y: rotation.y,
-          z: rotation.z,
+          x: targetQuat.x,
+          y: targetQuat.y,
+          z: targetQuat.z,
+          w: targetQuat.w,
           duration,
           ease: "power3.inOut",
         },
         0
       );
 
-      // Target is the center; keep camera looking at it
       timeline.to(
         this.controls.target,
         {
@@ -299,9 +292,6 @@ class CameraManager {
           z: center.z,
           duration,
           ease: "power3.inOut",
-          onUpdate: () => {
-            this.camera.lookAt(this.controls.target);
-          },
         },
         0
       );
@@ -310,11 +300,12 @@ class CameraManager {
       return timeline;
     }
 
-    // ─────────────────────────────────────
     // DEFAULT LOGIC FOR OTHER POSITIONS
-    // ─────────────────────────────────────
     if (this.rotations[positionName]) {
-      // Animate position
+      const targetQuat = new THREE.Quaternion().setFromEuler(
+        this.rotations[positionName]
+      );
+
       timeline.to(
         this.camera.position,
         {
@@ -327,20 +318,19 @@ class CameraManager {
         0
       );
 
-      // Animate rotation
       timeline.to(
-        this.camera.rotation,
+        this.camera.quaternion,
         {
-          x: this.rotations[positionName].x,
-          y: this.rotations[positionName].y,
-          z: this.rotations[positionName].z,
+          x: targetQuat.x,
+          y: targetQuat.y,
+          z: targetQuat.z,
+          w: targetQuat.w,
           duration: duration,
           ease: "power3.inOut",
         },
         0
       );
     } else if (this.targets[positionName]) {
-      // If we have a target but no rotation, animate position and controls target
       timeline.to(
         this.camera.position,
         {
@@ -361,11 +351,90 @@ class CameraManager {
           z: this.targets[positionName].z,
           duration: duration,
           ease: "power3.inOut",
-          onUpdate: () => this.controls.update(),
+          onUpdate: () => {
+            this.camera.lookAt(this.controls.target);
+          },
         },
         0
       );
     }
+
+    this.currentAnimation = timeline;
+    return timeline;
+  }
+
+  // Keep only ONE resetToDefault - the quaternion version
+  resetToDefault(duration = 2, callback = null) {
+    if (this.currentAnimation) {
+      this.currentAnimation.kill();
+    }
+
+    this.controls.enabled = false;
+
+    // 🔹 Store current quaternion as starting point
+    const startQuat = this.camera.quaternion.clone();
+
+    // Calculate target quaternion for default view
+    const lookAtVector = new THREE.Vector3()
+      .subVectors(this.targets.default, this.positions.default)
+      .normalize();
+
+    const targetQuat = new THREE.Quaternion().setFromRotationMatrix(
+      new THREE.Matrix4().lookAt(
+        new THREE.Vector3(0, 0, 0),
+        lookAtVector,
+        new THREE.Vector3(0, 1, 0)
+      )
+    );
+
+    const timeline = gsap.timeline({
+      onComplete: () => {
+        this.controls.target.copy(this.targets.default);
+        this.camera.lookAt(this.targets.default);
+        this.controls.update();
+        this.controls.enabled = true;
+
+        if (callback && typeof callback === "function") callback();
+        this.currentAnimation = null;
+      },
+    });
+
+    timeline.to(
+      this.camera.position,
+      {
+        x: this.positions.default.x,
+        y: this.positions.default.y,
+        z: this.positions.default.z,
+        duration: duration,
+        ease: "power2.inOut",
+      },
+      0
+    );
+
+    timeline.to(
+      this.camera.quaternion,
+      {
+        x: targetQuat.x,
+        y: targetQuat.y,
+        z: targetQuat.z,
+        w: targetQuat.w,
+        duration: duration,
+        ease: "power2.inOut",
+      },
+      0
+    );
+
+    timeline.to(
+      this.controls.target,
+      {
+        x: this.targets.default.x,
+        y: this.targets.default.y,
+        z: this.targets.default.z,
+        duration: duration,
+        ease: "power2.inOut",
+      },
+      0
+    );
 
     this.currentAnimation = timeline;
     return timeline;
@@ -395,76 +464,6 @@ class CameraManager {
   leaveMonitor(duration = 2, callback = null) {
     // Return the camera to default position
     return this.resetToDefault(duration, callback);
-  }
-
-  resetToDefault(duration = 2, callback = null) {
-    // Stop any current animation
-    if (this.currentAnimation) {
-      this.currentAnimation.kill();
-    }
-
-    // Disable controls while we animate back
-    this.controls.enabled = false;
-
-    // Make sure target is the default center (no update yet!)
-    this.controls.target.copy(this.targets.default);
-
-    const timeline = gsap.timeline({
-      onComplete: () => {
-        // Sync OrbitControls once at the end from current camera & target
-        this.controls.update();
-
-        console.log("controls re-enabled");
-        this.controls.enabled = true;
-
-        if (callback && typeof callback === "function") callback();
-
-        this.currentAnimation = null;
-      },
-    });
-
-    // Animate camera position back to default
-    timeline.to(
-      this.camera.position,
-      {
-        x: this.positions.default.x,
-        y: this.positions.default.y,
-        z: this.positions.default.z,
-        duration: duration,
-        ease: "power2.inOut",
-      },
-      0
-    );
-
-    // Compute a quaternion that looks from default position to default target
-    const lookAtVector = new THREE.Vector3()
-      .subVectors(this.targets.default, this.positions.default)
-      .normalize();
-
-    const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
-      new THREE.Matrix4().lookAt(
-        new THREE.Vector3(0, 0, 0),
-        lookAtVector,
-        new THREE.Vector3(0, 1, 0)
-      )
-    );
-
-    // Animate camera rotation back
-    timeline.to(
-      this.camera.quaternion,
-      {
-        x: targetQuaternion.x,
-        y: targetQuaternion.y,
-        z: targetQuaternion.z,
-        w: targetQuaternion.w,
-        duration: duration,
-        ease: "power2.inOut",
-      },
-      0
-    );
-
-    this.currentAnimation = timeline;
-    return timeline;
   }
 
   enableControls() {

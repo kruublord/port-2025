@@ -191,7 +191,7 @@ function loadScene() {
         parent: calAnchor,
         fontUrl: "/fonts/Sniglet_Regular.json",
         size: 0.14,
-        height: 0.02,
+        height: 0.003,
         color: 0xffffff,
         offset: new THREE.Vector3(0, 0, 0.01),
         letterSpacing: 0.025, // tweak this to widen / tighten
