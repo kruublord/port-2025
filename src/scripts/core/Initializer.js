@@ -3,13 +3,13 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 // Core imports
-import { initThreeJS } from "../scene.js";
+import { initThreeJS } from "./scene.js";
 import appState from "./AppState.js";
 
 // Singleton Managers
 import themeManager from "../themeManager.js";
 import CameraManager from "../camera.js";
-import Whiteboard from "../utils/whiteboard.js";
+import Whiteboard from "../special-interactions/whiteboard.js";
 import { initInnerWeb } from "../innerWeb.js";
 import { setupHoverOutline } from "../hoverOutline.js";
 

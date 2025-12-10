@@ -1,8 +1,8 @@
 import { initModalSystem } from "../modal.js";
 import { initImageOverlay } from "../fadeOverlayImage.js";
-import { setupMailbox } from "../mailbox.js";
+import { setupMailbox } from "../special-interactions/mailbox.js";
 import appState from "../core/AppState.js";
-import audioManager from "../audio.js";
+import audioManager from "../core/audio.js";
 import {
   MODAL_SELECTORS,
   IMAGE_OVERLAY_SELECTORS,

@@ -19,16 +19,16 @@ import appState from "./scripts/core/AppState.js";
 import { processScene } from "./scripts/core/SceneProcessor.js";
 // Singleton Managers
 import themeManager from "./scripts/themeManager.js";
-import audioManager from "./scripts/audio.js";
+import audioManager from "./scripts/core/audio.js";
 
 // Features
-import { setupMailbox } from "./scripts/mailbox.js"; // adjust path if needed
+import { setupMailbox } from "./scripts/special-interactions/mailbox.js";
 
 import { initImageOverlay } from "./scripts/fadeOverlayImage.js";
 import { createSteamEffect } from "./scripts/shaders/steamEffect.js";
 import CursorOverlay from "./scripts/effects/CursorOverlay.js";
-import ErhuInteraction from "./scripts/erhu.js"; // ADD THIS
-import CalendarDate from "./scripts/calenderDate.js";
+import ErhuInteraction from "./scripts/special-interactions/erhu.js";
+import CalendarDate from "./scripts/utils/calenderDate.js";
 
 // Configuration
 import {
@@ -49,7 +49,7 @@ import {
 } from "./scripts/config/constants.js";
 
 import { IntroTutorial } from "./scripts/ui/IntroTutorial.js";
-import ParticleTrail from "./scripts/effects/ParticleTrail.js"; // <-- Import the new class
+import ParticleTrail from "./scripts/unused/ParticleTrail.js"; // <-- Import the new class
 
 // Add to your main initialization (around line where you setup other components)
 let introTutorial = null;

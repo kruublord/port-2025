@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import themeManager from "../themeManager.js";
 import clockManager from "../clock.js";
-import { processRotatingObject } from "../objectRotation.js";
+import { processRotatingObject } from "../utils/objectRotation.js";
 import appState from "../core/AppState.js";
 
 const MUG_HOVER_GROUP_ID = "mugSet";

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import appState from "../core/AppState.js"; // ⬅️ same path as RaycasterController
+import appState from "../core/AppState.js";
 
 export default class Whiteboard {
   constructor(scene, camera, renderer, controls) {

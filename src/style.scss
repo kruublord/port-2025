@@ -916,13 +916,13 @@ lottie-player {
 }
 
 .contact-links a {
-  color: #805ad5;
+  color: #5065d9; // link colour (slightly darker than border)
   text-decoration: none;
   font-size: 1.5rem;
 }
 
 .contact-links a:hover {
-  color: #6b46c1;
+  color: #23325a; // same as text, stronger on hover
 }
 
 /* Contact form styling */
@@ -1179,10 +1179,10 @@ lottie-player {
   transition: all 0.3s ease;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
-
 .control-btn {
   background-color: var(--button-bg);
   border-color: var(--button-border);
+  color: var(--button-border);
 
   &:hover {
     background-color: var(--button-hover);
@@ -1192,28 +1192,6 @@ lottie-player {
 #theme-toggle i,
 #sound-toggle i {
   font-size: 2rem;
-}
-
-/* Light theme (day mode) */
-.light-theme .control-btn {
-  background-color: vars.$button-bg-day;
-  border-color: vars.$button-border-day;
-  color: #ffffff;
-}
-
-.light-theme .control-btn:hover {
-  background-color: vars.$button-hover-day;
-}
-
-/* Dark theme (night mode) */
-.dark-theme .control-btn {
-  background-color: vars.$button-bg-night;
-  border-color: vars.$button-border-night;
-  color: #ffffff;
-}
-
-.dark-theme .control-btn:hover {
-  background-color: vars.$button-hover-night;
 }
 
 /* Full-screen, black overlay */

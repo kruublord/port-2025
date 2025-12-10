@@ -1,7 +1,7 @@
 // scripts/core/RenderLoop.js
 import appState from "../core/AppState.js";
 import clockManager from "../clock.js";
-import { updateRotatingObjects } from "../objectRotation.js";
+import { updateRotatingObjects } from "../utils/objectRotation.js";
 import * as THREE from "three";
 import themeManager from "../themeManager.js"; // ⬅️ add this
 

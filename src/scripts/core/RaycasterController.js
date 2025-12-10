@@ -1,11 +1,9 @@
 // scripts/core/RaycasterController.js
 import * as THREE from "three";
 import { updateOutlineHover } from "../hoverOutline.js";
-import { updateHoverScale } from "../hoverScale.js";
+import { updateHoverScale } from "../special-interactions/hoverScale.js";
 import appState from "../core/AppState.js";
-import audioManager from "../audio.js";
-import { spinAnimation } from "../spinnyObjects.js";
-import { randomOink } from "../pig.js";
+import audioManager from "./audio.js";
 import { imageData, socialLinks, BUTTON_IDS } from "../config/constants.js";
 import themeManager from "../themeManager.js";
 

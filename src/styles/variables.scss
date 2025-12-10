@@ -4,55 +4,67 @@ $light-theme: (
   --text: #2e2e2e,
   --card-bg: #ffffff,
   --icon: #2e2e2e,
-  --button-bg: #80d0f7,
-  --button-hover: #67c1e0,
+
+  // Buttons
+  --button-bg: #a3d4ff,
+  --button-hover: #5fb4ff,
   --button-border: #ffffff,
 
-  --about-modal-bg: #ecf9ff,
-  --about-modal-border: #bee3f8,
-  --about-modal-text: #1e293b,
+  --about-modal-bg: #f1f6ff,
+  --about-modal-border: #9cb5ff,
+  --about-modal-text: #1b2438,
 
-  --work-modal-bg: #fff5f5,
-  --work-modal-border: #feb2b2,
-  --work-modal-text: #742a2a,
+  --work-modal-bg: #fff7f9,
+  --work-modal-border: #f29ab6,
+  --work-modal-text: #5a1730,
 
-  --erhu-modal-bg: #e9fcef,
-  // soft mint green background
-  --erhu-modal-border: #b5e7c4,
-  // light leafy border
-  --erhu-modal-text: #2f4f3a,
+  --erhu-modal-bg: #f9f5ef,
+  --erhu-modal-border: #d8a16a,
+  --erhu-modal-text: #2e302f,
 
-  // deep green-gray for strong readability
-  --contact-modal-bg: #faf5ff,
-  --contact-modal-border: #d6bcfa,
-  --contact-modal-text: #44337a,
+  --contact-modal-bg: #f4f7ff,
+  --contact-modal-border: #9cb5ff,
+  --contact-modal-text: #23325a, // deep indigo for contrast
 );
 
-// Dark Theme Map
 $dark-theme: (
-  --bg: #1a1e3a,
-  --text: #eaeaff,
-  --card-bg: #2b3060,
-  --icon: #c9d1ff,
-  --button-bg: #232b72,
-  --button-hover: #313f8d,
-  --button-border: #4f5b86,
+  /* ========= Global: soft night, not black ========= */ --bg: #202635,
+  // page background (blue-grey)
+  --card-bg: #262d3f,
+  // generic cards slightly darker
+  --text: #e8eef8,
+  // default text
+  --icon: #c7d2ff,
 
-  --about-modal-bg: #18202e,
-  --about-modal-border: #426d93,
-  --about-modal-text: #dbe9ff,
+  // icons
+  /* ========= Buttons ========= */ --button-bg: #27337c,
+  --button-hover: #4f6bff,
+  --button-border: #a5b4fc,
 
-  --work-modal-bg: #2b2030,
-  --work-modal-border: #a15277,
-  --work-modal-text: #f3d1df,
+  /* ========= About – dimmed version of day blue ========= */
+  --about-modal-bg: #283552,
+  // mid navy
+  --about-modal-border: #8fa2ff,
+  --about-modal-text: #f3f5ff,
 
-  --erhu-modal-bg: #1e2a23,
-  --erhu-modal-border: #4a715d,
-  --erhu-modal-text: #d4f5e3,
+  /* ========= Work / Projects – dim rose/plum ========= */
+  --work-modal-bg: #43304a,
+  // mid plum
+  --work-modal-border: #f29abf,
+  --work-modal-text: #ffe8f3,
 
-  --contact-modal-bg: #27243d,
-  --contact-modal-border: #7c5dbb,
-  --contact-modal-text: #e3dcff,
+  /* ========= Erhu – warm, but not cave-brown ========= */
+  --erhu-modal-bg: #3f3029,
+  // warm charcoal / stage wood
+  --erhu-modal-border: #e0a96a,
+  // brass/gold frame
+  --erhu-modal-text: #f5e6d0,
+
+  /* ========= Contact – UI-ish blue panel ========= */
+  --contact-modal-bg: #26364f,
+  // mid blue-grey
+  --contact-modal-border: #79a6ff,
+  --contact-modal-text: #eaf3ff
 );
 
 // Mixin to generate custom properties
@@ -61,14 +73,6 @@ $dark-theme: (
     #{$key}: #{$val};
   }
 }
-
-$button-bg-day: #80d0f7;
-$button-border-day: #ffffff;
-$button-hover-day: #67c1e0;
-
-$button-bg-night: #232b72;
-$button-hover-night: #313f8d;
-$button-border-night: #4f5b86;
 
 /* ===============================
    🎨 Base Colour Palette
@@ -87,19 +91,19 @@ $colour-green: #b2ddbf;
 $colour-shadow: rgba(0, 0, 0, 0.15);
 
 /* ===============================
-    Day Theme
+    Day Theme Tokens
 ================================= */
 $bg-day: #eef9fe;
 $text-day: $colour-black;
 $card-bg-day: $colour-white;
 $icon-colour-day: $colour-black;
 
-$button-bg-day: #80d0f7;
-$button-hover-bg-day: #67c1e0;
-$button-border-day: $colour-white;
+$button-bg-day: #a3d4ff;
+$button-hover-day: #5fb4ff;
+$button-border-day: #ffffff;
 
 /* ===============================
-    Night Theme
+    Night Theme Tokens
 ================================= */
 $bg-night: #1a1e3a;
 $text-night: #eaeaff;
@@ -107,25 +111,26 @@ $card-bg-night: #2b3060;
 $icon-colour-night: #c9d1ff;
 
 $button-bg-night: #232b72;
-$button-hover-bg-night: #313f8d;
-$button-border-night: #4f5b86;
+$button-hover-night: #4b63ff; // match --button-hover in $dark-theme
+$button-border-night: #a5b4fc;
 
 /* ===============================
     Semantic Tokens
 ================================= */
-$colour-primary: $colour-blue;
+// Make "primary" match your day button colour
+$colour-primary: $button-bg-day;
 $colour-secondary: $colour-purple;
 $colour-surface: $colour-white;
-$colour-background: $bg-day; // override in theme switch
-$colour-text: $text-day; // override in theme switch
+$colour-background: $bg-day; // override on theme switch
+$colour-text: $text-day; // override on theme switch
 
 $colour-on-primary: $colour-white; // text/icons on primary buttons
 
 /* ===============================
    🔘 Button Tokens
 ================================= */
-$button-bg: $colour-primary;
-$button-hover-bg: $button-hover-bg-day;
+$button-bg: $button-bg-day;
+$button-hover-bg: $button-hover-day;
 $button-border: $button-border-day;
 $button-text: $colour-on-primary;
 

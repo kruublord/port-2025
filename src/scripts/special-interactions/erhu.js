@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import audioManager from "./audio.js";
+import audioManager from "../core/audio.js";
 
 /**
  * Music Note Particle System for Erhu
