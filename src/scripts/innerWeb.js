@@ -67,6 +67,7 @@ export function initInnerWeb(
   });
 
   // Create a plane geometry that matches the iframe dimensions
+  // Create a plane geometry that matches the iframe dimensions
   const planeGeometry = new THREE.PlaneGeometry(elementWidth, elementHeight);
   const occlusionPlane = new THREE.Mesh(planeGeometry, occlusionMaterial);
 
@@ -76,6 +77,12 @@ export function initInnerWeb(
   occlusionPlane.scale.copy(scale);
 
   occlusionPlane.name = "iframeInteractionPlane";
+
+  // 🔹 make this plane part of the monitor hover group
+  occlusionPlane.userData.hoverGroup = "monitorSet";
+
+  // 🔹 register it for raycasting
+  appState.addRaycasterObject(occlusionPlane);
 
   scene.add(occlusionPlane);
   disableIframe(); // Disable interaction by default

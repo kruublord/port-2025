@@ -173,6 +173,24 @@ function loadScene() {
     // ─────────────────────────────────────────
     processScene(glb.scene); // applies theme materials (including peashooter)
     appState.scene.add(glb.scene);
+    //  PROCESS SCENE + ADD
+    // ─────────────────────────────────────────
+    //  MONITOR HOVER GROUP + RAYCAST SETUP
+    // ─────────────────────────────────────────
+    const MONITOR_GROUP_ID = "monitorSet";
+
+    glb.scene.traverse((obj) => {
+      if (!obj.isMesh) return;
+
+      // adjust this condition to match your monitor naming (e.g. "monitor-raycast")
+      if (obj.name && obj.name.includes("monitor")) {
+        // make this mesh part of the monitor hover group
+        obj.userData.hoverGroup = MONITOR_GROUP_ID;
+
+        // make sure it's in the raycaster list
+        appState.addRaycasterObject(obj);
+      }
+    });
 
     // ─────────────────────────────────────────
     //  CALENDAR 3D DATE SETUP

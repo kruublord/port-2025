@@ -166,12 +166,7 @@ export default class RaycasterController {
 
     if (!groupId) return null;
 
-    // 2) if we already built this group once, reuse it
-    if (this.hoverGroups[groupId]) {
-      return this.hoverGroups[groupId];
-    }
-
-    // 3) otherwise, scan through raycastable objects to build the group
+    // 🔹 2) ALWAYS rebuild group (no caching)
     const groupMembers = [];
     const search = (obj) => {
       if (!obj) return;
@@ -185,7 +180,6 @@ export default class RaycasterController {
 
     this.objects.forEach(search);
 
-    this.hoverGroups[groupId] = groupMembers;
     return groupMembers;
   }
 
@@ -301,7 +295,21 @@ export default class RaycasterController {
       return;
     }
 
-    if (object.name.includes("monitor")) {
+    const isMonitorHit = (() => {
+      let cur = object;
+      while (cur) {
+        if (
+          cur.name.includes("monitor") || // actual monitor mesh
+          cur.name === "iframeInteractionPlane" // CSS3D occlusion plane
+        ) {
+          return true;
+        }
+        cur = cur.parent;
+      }
+      return false;
+    })();
+
+    if (isMonitorHit) {
       audioManager.playClick();
       appState.cameraManager.zoomToMonitor();
       appState.innerWeb.enableIframe();
